@@ -13,7 +13,7 @@ namespace SkyRacers
         RunManager run;
         Font font;
         RectTransform root, overlay, card, hud;
-        Text heading, subtitle, record, timer, speed, power, altitude, warning, countdown, progress;
+        Text heading, subtitle, record, timer, speed, power, altitude, warning, countdown, progress, mach;
         Image powerBar, routeBar;
         Button primary, secondary, tertiary;
         Text primaryText, secondaryText, tertiaryText;
@@ -37,7 +37,7 @@ namespace SkyRacers
             record = Label(tr, "Best", "--:--.---", 20, 39, 250, 38, 28, Color.white);
             var bottom = Panel(hud, "Aircraft telemetry", 40, 724, 460, 136, Ink);
             speed = Label(bottom, "Speed", "342", 20, 12, 180, 58, 45, Color.white);
-            Label(bottom, "Units", "KM/H", 23, 74, 130, 22, 14, Muted);
+            mach = Label(bottom, "Units", "KM/H  /  M 0.00", 23, 74, 170, 22, 14, Muted);
             power = Label(bottom, "Power", "POTÊNCIA  62%", 200, 23, 235, 26, 18, Accent);
             Panel(bottom, "Power rail", 200, 62, 230, 5, new Color(.2f, .25f, .27f));
             powerBar = Panel(bottom, "Power bar", 200, 62, 142, 5, Accent).GetComponent<Image>();
@@ -93,13 +93,16 @@ namespace SkyRacers
             timer.text = RecordStore.Format(run.Elapsed);
             record.text = RecordStore.Best > 0 ? RecordStore.Format(RecordStore.Best) : "--:--.---";
             speed.text = Mathf.RoundToInt(plane.Speed * 3.6f).ToString();
+            mach.text = $"KM/H  /  M {plane.Mach:0.00}";
             power.text = $"POTÊNCIA  {plane.Throttle * 100:0}%";
+            power.color = plane.Afterburner ? new Color(.4f, .75f, 1f) : Accent;
             powerBar.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 230 * plane.Throttle);
-            float margin = run.Course.ceiling - Mathf.Max(plane.transform.position.y + 3, plane.HighestPoint);
+            float margin = run.Course.CeilingAt(plane.transform.position) - Mathf.Max(plane.transform.position.y + 3, plane.HighestPoint);
             altitude.text = $"MARGEM ATÉ O TETO  {Mathf.Max(0, margin):0} m";
             progress.text = $"PERCURSO  {run.Progress * 100:0}%";
             routeBar.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 370 * run.Progress);
-            warning.text = margin < 25 ? "↓  ALTITUDE ALTA — DESÇA" : plane.Speed < 52 && run.State == RunState.Running ? "BAIXA VELOCIDADE — ACELERE" : plane.Airbrake > .1f ? "AIRBRAKES ABERTOS" : "";
+            float toBridge = run.Course.route[run.Course.BridgeSector].z - plane.transform.position.z;
+            warning.text = margin < 25 ? "↓  ALTITUDE ALTA — DESÇA" : plane.Speed < 52 && run.State == RunState.Running ? "BAIXA VELOCIDADE — ACELERE" : toBridge > 0 && toBridge < 1800 ? "PONTE À FRENTE — PASSE SOB O ARCO CENTRAL" : plane.Airbrake > .1f ? "AIRBRAKES ABERTOS" : plane.Afterburner ? "PÓS-COMBUSTÃO" : "";
             countdown.text = run.State == RunState.Countdown ? Mathf.CeilToInt(run.Countdown).ToString() : "";
         }
         RectTransform Rect(Transform parent, string name, float x, float y, float width, float height)

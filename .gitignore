@@ -41,6 +41,8 @@ mono_crash.*
 **/[Aa]ssets/StreamingAssets/aa/
 
 # OS files.
+__pycache__/
+*.pyc
 .DS_Store
 ._*
 Thumbs.db

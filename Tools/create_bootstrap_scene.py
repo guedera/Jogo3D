@@ -82,7 +82,7 @@ def main():
     rock = material("Canyon Rock", guid(ASSETS / "Shaders/CanyonRock.shader", "ShaderImporter"), (1, 1, 1))
     marker = material("Course markers", shader("Lit"), (.85, .96, .35))
     dark = material("Beacon steel", shader("Lit"), (.1, .14, .14))
-    exhaust = material("Engine glow", shader("Unlit"), (1, .42, .12))
+    exhaust = material("Engine glow", guid(ASSETS / "Shaders/Exhaust.shader", "ShaderImporter"), (.22, .55, 2))
     script = guid(ASSETS / "Scripts/GameBootstrap.cs", "MonoImporter", "  serializedVersion: 2\n  defaultReferences: []\n  executionOrder: 0\n  icon: {instanceID: 0}\n")
     data = guid(ASSETS / "ThirdParty/F18/aircraft.json", "TextScriptImporter")
     sample = (ASSETS / "Scenes/SampleScene.unity").read_text()

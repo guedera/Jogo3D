@@ -6,13 +6,14 @@ namespace SkyRacers
     public sealed class FlightController : MonoBehaviour
     {
         [Header("Flight tuning (metres / seconds)")]
-        public float engineAcceleration = 28;
-        public float drag = .0018f;
-        public float brakeDrag = .0055f;
+        public float engineAcceleration = 24;
+        public float afterburnerAcceleration = 16;
+        public float drag = .00030f;
+        public float brakeDrag = .00085f;
         public float throttleRate = .35f;
         public Vector3 turnRates = new Vector3(38, 17, 95);
         public float velocityAlignment = 1.8f;
-        public float initialSpeed = 95;
+        public float initialSpeed = 170;
         public float initialThrottle = .62f;
         public Rigidbody Body { get; private set; }
         public FlightInput Input { get; private set; }
@@ -20,6 +21,9 @@ namespace SkyRacers
         public float Throttle { get; private set; }
         public float Speed => Body == null ? 0 : Body.linearVelocity.magnitude;
         public float Airbrake { get; private set; }
+        public bool Afterburner => Throttle >= .995f;
+        // Fixed reference for this arcade atmosphere, not a full atmospheric model.
+        public float Mach => Speed / 340f;
         public float HighestPoint
         {
             get
@@ -77,12 +81,13 @@ namespace SkyRacers
             float forwardSpeed = Vector3.Dot(velocity, transform.forward);
             var lateral = velocity - transform.forward * forwardSpeed;
             float lift = 9.81f * Mathf.Pow(Mathf.InverseLerp(22, 60, speed), 2);
-            Body.AddForce(transform.forward * (engineAcceleration * Throttle)
+            float thrust = engineAcceleration * Throttle + (Afterburner ? afterburnerAcceleration : 0);
+            Body.AddForce(transform.forward * thrust
                 - velocity * speed * (drag + Airbrake * brakeDrag)
                 - lateral * velocityAlignment * authority
                 + transform.up * lift, ForceMode.Acceleration);
-            if (HighestPoint >= Run.Course.ceiling) Run.Fail("Você ultrapassou o topo do cânion.");
-            else if (transform.position.y < -20) Run.Fail("O avião atingiu o solo.");
+            if (HighestPoint >= Run.Course.CeilingAt(transform.position)) Run.Fail("Você ultrapassou o topo do cânion.");
+            else if (transform.position.y < Run.Course.FloorAt(transform.position.z) - 20) Run.Fail("O avião atingiu o solo.");
         }
 
         void OnCollisionEnter(Collision collision)

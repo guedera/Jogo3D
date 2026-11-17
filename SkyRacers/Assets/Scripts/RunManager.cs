@@ -64,8 +64,10 @@ namespace SkyRacers
             if (State == RunState.Running)
             {
                 var current = Aircraft.Body.position;
-                if (Aircraft.HighestPoint >= Course.ceiling) { Fail("Você ultrapassou o topo do cânion."); return; }
+                if (Aircraft.HighestPoint >= Course.CeilingAt(current)) { Fail("Você ultrapassou o topo do cânion."); return; }
                 if (current.z < -240 || current.z > Course.length + 240) { Fail("Você saiu do percurso."); return; }
+                if (Course.CrossedBridgePlane(previousPosition, current, out var crossing) && !Course.UnderBridge(crossing))
+                { Fail("Passe por baixo do arco central da ponte."); return; }
                 while (NextSector < Course.route.Length && Course.CrossedSector(NextSector, previousPosition, current)) NextSector++;
                 previousPosition = current;
                 if (NextSector >= Course.route.Length)

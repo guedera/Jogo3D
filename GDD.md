@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-Atualizado em 17/11/2026. Implementação inicial criada em Unity 6000.6.6f1, URP e Input System. Cena de entrada: `Assets/Scenes/CanyonRun.unity`. Código compilado e referências verificadas; playtest e build Windows ainda pendentes. O ambiente impediu a execução adicional dos serviços locais do editor.
+Atualizado em 17/11/2026 após o primeiro playtest do usuário, que aprovou câmera e dirigibilidade. Revisão alpina implementada em Unity 6000.6.6f1, URP e Input System. Cena: `Assets/Scenes/CanyonRun.unity`. Compilação C# e referências verificadas; a revisão visual e de velocidade ainda requer novo playtest. A build Windows permanece pendente.
 
 ## Conceito e escopo
 
@@ -28,7 +28,7 @@ Decisões confirmadas:
 6. Salvar o melhor tempo localmente apenas em runs concluídas e válidas.
 7. Reiniciar restaura avião, câmera, potência, superfícies móveis, percurso e cronômetro.
 
-Propostas iniciais para implementação: contagem de preparação de 3 segundos com avião e cronômetro parados; teto de altitude constante e coerente com a borda visual do cânion; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo.
+Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 150 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal; contorná-la encerra a run.
 
 ## Controles
 
@@ -66,7 +66,9 @@ Evitar atravessar paredes usando detecção entre o avião e a posição desejad
 
 ## Cenário
 
-Uma fase fixa, reproduzível, de cânion rochoso. Construir a geometria no projeto a partir de um traçado editável, com piso e paredes contínuos. Preferir geometria estática por trechos e materiais URP simples. O visual low-poly do cenário deverá combinar com o caça.
+Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, riacho, neve parcial e montanhas ao fundo. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 10% em relação ao primeiro playtest. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
+
+Há uma única ponte de pedra, com três arcos, aproximadamente no meio do percurso. O arco central tem abertura de cerca de 161 unidades de largura e 89 de altura no centro, antes das margens de segurança do avião. O tabuleiro alcança o teto local e a passagem é validada para impedir desvios laterais. O HUD avisa a aproximação.
 
 Progressão proposta:
 
@@ -169,7 +171,15 @@ Situação da implementação: os sistemas abaixo estão escritos, com compilaç
 
 A cena inicial monta o jogo ao dar Play, sem importador externo. O menu `SkyRacers > 1 - Build Game Scene` permite gerar a versão editável com meshes e prefab persistentes. O comando de build Windows está no mesmo menu.
 
-O percurso calculado tem aproximadamente 17,1 km, 186 pontos e raio mínimo aproximado de 299 unidades. O voo inicia a 65 unidades de altura, velocidade 95 unidades/s e potência de 62%. A estimativa geométrica de duração é 137–174 segundos; ainda precisa ser medida em uma run pilotada. Visual, shaders, colisões em execução, FPS e build Windows não foram testados neste ambiente.
+O percurso atual tem aproximadamente 46,3 km e 501 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. O voo inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. A extensão foi aumentada para acomodar a velocidade supersônica. O tempo idealizado na velocidade máxima é de aproximadamente 127 segundos; manobras, aceleração e frenagens aumentam a duração real.
+
+Propulsão: aceleração-base 24, pós-combustão adicional 16 a 100% de potência, arrasto quadrático 0,00030 e arrasto adicional de airbrakes 0,00085. Em reta nivelada, a velocidade de equilíbrio com pós-combustão é aproximadamente 365 m/s (1.315 km/h). O Mach exibido usa referência fixa de 340 m/s para a atmosfera simplificada do jogo. A integração isolada da aceleração prevê aproximadamente 10,6 segundos de 170 m/s até Mach 1 após aplicar potência máxima; isso não inclui o tempo de avanço da manete nem curvas.
+
+As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. Câmera, taxas de roll/pitch/yaw e assistência angular foram preservadas.
+
+Sombras: perfil PC com distância 600, resolução 4096 e quatro cascatas; Mobile com distância 300, resolução 2048 e duas cascatas. O limite anterior era 50. A nova fase usa uma chave própria de recorde, preservando os dados antigos sem compará-los ao novo percurso.
+
+Validação desta revisão: compilação C#, referências de assets e cálculos de velocidade/escala/abertura da ponte. O validador de cena do Unity inclui cobertura do piso, setores, teto local, rejeição de desvio da ponte e BoxCast sob o arco central; ainda deve ser executado no editor. Visual, shaders, colisões em execução, FPS e build Windows desta revisão não foram testados neste ambiente.
 
 Conforme o enunciado local `Projeto_3D_20262.docx.pdf`: entrega prevista até 25/11/2026; build para pelo menos Windows; repositório com código-fonte e créditos no README; GDD atualizado; página no itch.io vinculada à jam com instruções e imagens/vídeos; confirmar submissões no Blackboard, GitHub e itch.io.
 

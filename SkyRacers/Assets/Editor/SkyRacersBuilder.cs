@@ -26,15 +26,15 @@ namespace SkyRacers.Editor
             var sun = new GameObject("Late afternoon sun", typeof(Light));
             sun.transform.rotation = Quaternion.Euler(42, -28, 0);
             var light = sun.GetComponent<Light>(); light.type = LightType.Directional;
-            light.color = new Color(1, .88f, .72f); light.intensity = 1.65f;
+            light.color = new Color(.93f, .97f, 1f); light.intensity = 1.35f;
             light.shadows = LightShadows.Soft;
             RenderSettings.sun = light;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(.44f, .57f, .64f);
-            RenderSettings.ambientEquatorColor = new Color(.49f, .41f, .33f);
-            RenderSettings.ambientGroundColor = new Color(.25f, .21f, .18f);
+            RenderSettings.ambientSkyColor = new Color(.50f, .60f, .70f);
+            RenderSettings.ambientEquatorColor = new Color(.37f, .46f, .46f);
+            RenderSettings.ambientGroundColor = new Color(.19f, .24f, .23f);
             RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(.68f, .70f, .66f); RenderSettings.fogDensity = .00065f;
+            RenderSettings.fogColor = new Color(.66f, .74f, .80f); RenderSettings.fogDensity = .00042f;
             var course = new GameObject("Canyon 01 - fixed course").AddComponent<CanyonCourse>();
             course.rockMaterial = MaterialAsset("Canyon Rock", Shader.Find("SkyRacers/Canyon Rock"), Color.white);
             course.markerMaterial = MaterialAsset("Course markers", Shader.Find("Universal Render Pipeline/Lit"), new Color(.85f, .96f, .35f));
@@ -51,7 +51,7 @@ namespace SkyRacers.Editor
             var cameraObject = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener), typeof(ChaseCamera));
             cameraObject.tag = "MainCamera";
             var camera = cameraObject.GetComponent<Camera>(); camera.nearClipPlane = .25f; camera.farClipPlane = 3500;
-            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.38f, .57f, .66f);
+            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.43f, .60f, .75f);
             camera.fieldOfView = 62;
             cameraObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
             cameraObject.transform.SetPositionAndRotation(course.Spawn + new Vector3(0, 11, -34), Quaternion.Euler(7, 0, 0));
@@ -84,7 +84,7 @@ namespace SkyRacers.Editor
                 material.SetFloat("_AlphaClip", 1); material.SetFloat("_Cutoff", .05f); material.EnableKeyword("_ALPHATEST_ON");
                 materials[i] = material;
             }
-            var exhaustMat = MaterialAsset("Engine glow", Shader.Find("Universal Render Pipeline/Unlit"), new Color(1, .42f, .12f));
+            var exhaustMat = MaterialAsset("Engine glow", Shader.Find("SkyRacers/Exhaust"), new Color(.22f, .55f, 2f, .85f));
             var root = AircraftFactory.Create(File.ReadAllText("Assets/ThirdParty/F18/aircraft.json"), materials, exhaustMat);
             foreach (var filter in root.GetComponentsInChildren<MeshFilter>())
                 if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(filter.sharedMesh))) filter.sharedMesh = SaveMesh(filter.sharedMesh);
@@ -138,7 +138,16 @@ namespace SkyRacers.Editor
                     course.route[i] + (course.route[i] - course.route[i - 1]).normalized * 4 + Vector3.up * 65)) throw new Exception("Invalid sector " + i);
             }
             if (course.CrossedSector(1, course.route[1] + Vector3.up * 65 + Vector3.forward * 5, course.route[1] + Vector3.up * 65 - Vector3.forward * 5)) throw new Exception("Reverse sector accepted");
-            Debug.Log("SKYRACERS_VALIDATION_OK: floor coverage, sequential gates, reverse rejection; " + course.route.Length + " sectors");
+            var bridge = course.route[course.BridgeSector];
+            if (!course.UnderBridge(bridge + Vector3.up * 65)) throw new Exception("Bridge cruise aperture blocked");
+            if (course.UnderBridge(bridge + Vector3.up * 110)) throw new Exception("Bridge overflight accepted");
+            if (course.UnderBridge(bridge + course.RightAt(course.BridgeSector) * 110 + Vector3.up * 45)) throw new Exception("Bridge bypass accepted");
+            if (Mathf.Abs(course.CeilingAt(bridge) - course.FloorAt(bridge.z) - course.ceiling) > .01f) throw new Exception("Local ceiling mismatch");
+            // The full flight envelope must be clear down the central arch.
+            var along = Vector3.Cross(course.RightAt(course.BridgeSector), Vector3.up);
+            if (Physics.BoxCast(bridge + Vector3.up * 65 - along * 50, new Vector3(8, 3, 9), along, out _, Quaternion.LookRotation(along), 100, 1))
+                throw new Exception("Central bridge corridor intersects geometry");
+            Debug.Log("SKYRACERS_VALIDATION_OK: floor, gates, bridge clearance/bypass and local ceiling; " + course.route.Length + " sectors");
         }
     }
 }

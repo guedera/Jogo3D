@@ -28,13 +28,16 @@ A potência permanece no valor escolhido ao soltar Shift/Ctrl. Incline o avião 
 - Câmera traseira suavizada com detecção de paredes.
 - Empuxo, arrasto, sustentação, inércia e assistência nas curvas.
 - F-18 texturizado com estabilizadores e lemes animados, asas estendidas e trem recolhido.
-- Cânion fixo, teto a 150 unidades, marcadores e chegada.
-- HUD de tempo, recorde, velocidade, potência, altitude e progresso.
+- Pós-combustão a 100% de potência, chamas azuis ancoradas nos bocais e velocidade de equilíbrio em reta de aproximadamente 1.315 km/h (Mach 1,07 na atmosfera simplificada do jogo).
+- Cânion alpino fixo, 10% mais estreito, com pinheiros, riacho, neve nas encostas, montanhas e variações de elevação.
+- Uma única ponte de três arcos no meio da fase; passagem obrigatória sob o arco central.
+- Teto de voo a 150 unidades acima do relevo local, marcadores e chegada.
+- HUD de tempo, recorde, velocidade em km/h e Mach, potência, altitude e progresso.
 - Preparação, pausa, derrota, vitória, reinício e menu principal.
 - Recorde local salvo somente após completar todos os setores.
 - Áudio de motor gerado por código e efeitos visuais de escapamento.
 
-Colidir, ultrapassar o teto ou sair pelos limites longitudinais encerra a run. Pausar congela cronômetro e física; perder o foco da janela também pausa. Reiniciar restaura a run desde o começo.
+Colidir, ultrapassar o teto, contornar a passagem central da ponte ou sair pelos limites longitudinais encerra a run. Pausar congela cronômetro e física; perder o foco da janela também pausa. Reiniciar restaura a run desde o começo. A nova fase tem uma chave própria de recorde para não comparar tempos com a versão antiga.
 
 ## Editar e gerar build
 
@@ -57,7 +60,9 @@ Concluído: compilação C# dos scripts de jogo e editor contra as assemblies in
 
 Não foi possível executar Play Mode nem gerar a build neste ambiente: a execução adicional do Unity foi impedida por restrições aos serviços locais do editor. Visual, shaders, física em execução, FPS e build Windows precisam de validação no editor.
 
-O percurso calculado tem aproximadamente 17,1 km. A estimativa de 2–3 minutos é geométrica, usando velocidades de equilíbrio do modelo de voo; ainda não foi medida em uma run pilotada.
+A versão inicial foi testada pelo usuário, que aprovou câmera e dirigibilidade. Esta revisão preserva os parâmetros de rotação e a câmera, altera a propulsão e alonga o percurso para aproximadamente 46,3 km. O tempo idealizado à velocidade máxima é 127 segundos; aceleração, curvas e frenagens aumentam esse valor. A duração da nova run ainda precisa ser medida em voo.
+
+As sombras do perfil PC passaram de 50 para 600 unidades de distância, com atlas de 4096 e quatro cascatas. O perfil Mobile usa 300 unidades e atlas de 2048. A melhoria visual e o custo de desempenho precisam ser avaliados em Play Mode.
 
 Playtest inicial:
 

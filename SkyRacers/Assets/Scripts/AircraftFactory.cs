@@ -70,13 +70,19 @@ namespace SkyRacers
             surfaces.exhausts = new Transform[2];
             for (int i = 0; i < 2; i++)
             {
-                var glow = GameObject.CreatePrimitive(PrimitiveType.Sphere); glow.name = "Engine glow " + i;
-                var collision = glow.GetComponent<Collider>();
-                collision.enabled = false;
-                if (Application.isPlaying) UnityEngine.Object.Destroy(collision); else UnityEngine.Object.DestroyImmediate(collision);
-                glow.transform.SetParent(root.transform, false); glow.transform.localPosition = new Vector3(i == 0 ? -.85f : .85f, -.1f, -8.2f);
+                // Nodes 5/6 are the actual nozzle cylinders. Derive anchors after scaling.
+                var nozzle = BoundsOf(nodes[5 + i]);
+                var anchor = new GameObject("Nozzle anchor " + i).transform;
+                anchor.SetParent(root.transform, false);
+                anchor.localPosition = new Vector3(nozzle.center.x, nozzle.center.y, nozzle.min.z + .03f);
+                float diameter = Mathf.Min(nozzle.size.x, nozzle.size.y) * .88f;
+                anchor.localScale = new Vector3(diameter, diameter, 1);
+                var glow = new GameObject("Exhaust plume " + i, typeof(MeshFilter), typeof(MeshRenderer));
+                glow.transform.SetParent(anchor, false);
+                glow.GetComponent<MeshFilter>().sharedMesh = ExhaustMesh(i);
                 glow.GetComponent<Renderer>().sharedMaterial = exhaustMat; surfaces.exhausts[i] = glow.transform;
                 glow.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+                glow.GetComponent<Renderer>().receiveShadows = false;
             }
             foreach (Transform t in root.GetComponentsInChildren<Transform>()) t.gameObject.layer = 2;
             Debug.Log($"F18 bounds: {bounds.size}; import scale: {scale:F3}");
@@ -84,6 +90,25 @@ namespace SkyRacers
         }
         static void AddSurface(List<AircraftVisuals.Surface> list, Transform part, Vector3 axis, float pitch, float roll, float yaw, float brake)
         { list.Add(new AircraftVisuals.Surface { part = part, axis = axis, neutral = part.localRotation, pitch = pitch, roll = roll, yaw = yaw, brake = brake }); }
+        static Mesh ExhaustMesh(int engine)
+        {
+            const int sides = 16, rings = 8;
+            var vertices = new List<Vector3>(); var uv = new List<Vector2>(); var indices = new List<int>();
+            for (int r = 0; r < rings; r++)
+            for (int s = 0; s <= sides; s++)
+            {
+                float t = (float)r / (rings - 1), angle = s * Mathf.PI * 2 / sides;
+                float radius = .5f * Mathf.Pow(1 - t, .6f);
+                vertices.Add(new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, -t));
+                uv.Add(new Vector2((float)s / sides, t));
+                if (r == rings - 1 || s == sides) continue;
+                int a = r * (sides + 1) + s, b = a + sides + 1;
+                indices.AddRange(new[] { a, b, a + 1, a + 1, b, b + 1 });
+            }
+            var mesh = new Mesh { name = "F18_Exhaust_" + engine };
+            mesh.SetVertices(vertices); mesh.SetUVs(0, uv); mesh.SetTriangles(indices, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            return mesh;
+        }
         static Bounds BoundsOf(Transform transform)
         {
             var all = transform.GetComponentsInChildren<Renderer>(); var b = all[0].bounds;
