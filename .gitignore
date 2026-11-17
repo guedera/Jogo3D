@@ -1,0 +1,49 @@
+# Unity: generated directories (also applies to the nested SkyRacers project).
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Mm]emoryCaptures/
+**/[Rr]ecordings/
+**/[Cc]rashReports/
+
+# IDE caches and Unity-generated solutions/projects.
+.vs/
+.idea/
+.vscode/
+.gradle/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity diagnostics and generated asset tooling.
+sysinfo.txt
+mono_crash.*
+**/[Aa]ssets/AssetStoreTools*
+**/[Aa]ssets/Plugins/Editor/JetBrains*
+**/[Aa]ssets/AddressableAssetsData/*/*.bin*
+**/[Aa]ssets/StreamingAssets/aa/
+
+# OS files.
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Keep Assets (including .meta), Packages and ProjectSettings versioned.
