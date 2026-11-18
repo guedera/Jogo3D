@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-Atualizado em 17/11/2026 após o primeiro playtest do usuário, que aprovou câmera e dirigibilidade. Revisão alpina implementada em Unity 6000.6.6f1, URP e Input System. Cena: `Assets/Scenes/CanyonRun.unity`. Compilação C# e referências verificadas; a revisão visual e de velocidade ainda requer novo playtest. A build Windows permanece pendente.
+Atualizado em 18/11/2026. Implementado em Unity 6000.6.6f1, URP e Input System. A revisão inclui nova física assistida, voo livre, fitas móveis no HUD e ponte com vão alto. Compilação, referências e testes numéricos passaram; validação em Play Mode e build Windows permanecem pendentes.
 
 ## Conceito e escopo
 
@@ -11,7 +11,7 @@ Jogo 3D de corrida aérea solo com uma única fase. O jogador começa pilotando 
 Decisões confirmadas:
 
 - Câmera em terceira pessoa atrás do avião.
-- Pilotagem semirrealista com resposta arcade: inércia e sensação de voo, com controles acessíveis.
+- Pilotagem semirrealista com sustentação dependente de velocidade e ângulo de ataque, arrasto induzido e controle assistido para teclado. Resposta rápida de roll, limite de −5/+10,5 G (envelope de jogo) e estol progressivo.
 - Cronômetro crescente e recorde de menor tempo; não há contagem regressiva para derrota.
 - Uma run bem executada deve durar aproximadamente 2–3 minutos.
 - Modelo do caça fornecido pelo usuário; cenário construído no projeto.
@@ -28,7 +28,7 @@ Decisões confirmadas:
 6. Salvar o melhor tempo localmente apenas em runs concluídas e válidas.
 7. Reiniciar restaura avião, câmera, potência, superfícies móveis, percurso e cronômetro.
 
-Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 150 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal; contorná-la encerra a run.
+Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 450 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal; contorná-la encerra a run.
 
 ## Controles
 
@@ -66,9 +66,9 @@ Evitar atravessar paredes usando detecção entre o avião e a posição desejad
 
 ## Cenário
 
-Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, riacho, neve parcial e montanhas ao fundo. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 10% em relação ao primeiro playtest. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
+Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, riacho, neve parcial e montanhas ao fundo. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 60% em relação à primeira versão alpina. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
 
-Há uma única ponte de pedra, com três arcos, aproximadamente no meio do percurso. O arco central tem abertura de cerca de 161 unidades de largura e 89 de altura no centro, antes das margens de segurança do avião. O tabuleiro alcança o teto local e a passagem é validada para impedir desvios laterais. O HUD avisa a aproximação.
+Há uma única ponte de pedra, com três arcos, aproximadamente no meio do percurso. O arco central mantém 22 unidades de largura, com abertura de 408 unidades nas laterais e 438 no centro, antes das margens de segurança do avião. O tabuleiro alcança o teto local e a passagem é validada para impedir desvios laterais. A passagem exige alinhamento lateral das asas, com liberdade vertical dentro do vão alto. Pilares esbeltos sustentam o tabuleiro, sem parede maciça fechando o corredor.
 
 Progressão proposta:
 
@@ -88,7 +88,7 @@ Asset importado e inspecionado: `low-poly-f18-super-hornet.zip`. Contém glTF, 1
 
 As dimensões da geometria na pose de voo antes do ajuste são aproximadamente 2,798 × 0,655 × 3,568 unidades. O importador centraliza o modelo, orienta o nariz para +Z e ajusta o comprimento do conjunto para 18 unidades. O trem e suas portas usam as poses finais dos canais de animação. As dobradiças `bone4` e `bone6` ficam neutras, mantendo as asas estendidas.
 
-Mapeamento implementado: `bone7` e `bone8` são estabilizadores, com pitch conjunto e roll diferencial; `bone15` e `bone17` são os lemes. Não há um airbrake dorsal isolado: a frenagem usa deflexões combinadas dos estabilizadores e lemes, além do aumento de arrasto. A animação de demonstração não roda durante o jogo.
+Mapeamento implementado: oito superfícies. Estabilizadores nos nós 34/36; ailerons externos nas meshes 12/28; flaps internos nas meshes 10/22; lemes nas meshes 40/44. Pivôs adicionais nas bordas de dobradiça preservam a pose original e seguem o enflechamento/inclinação das peças. Roll usa deflexão diferencial dos ailerons, flaps e estabilizadores; pitch usa os estabilizadores; yaw usa ambos os lemes. Flaps descem automaticamente em baixa velocidade ou alto ângulo de ataque. X mistura deflexões de frenagem, com saturação a ±35°. As dobradiças de dobra 15/31 não são animadas. Não existem flaps de bordo de ataque nem airbrake dorsal separados no asset; não é criada movimentação fictícia da asa inteira. A animação de demonstração não roda durante o jogo.
 
 Na importação:
 
@@ -114,9 +114,9 @@ As deflexões devem interpolar suavemente e voltar ao neutro. Não animar a dobr
 
 ## Interface e estados
 
-Menu principal: título, escolha da única fase disponível, controles e sair. Não mostrar fases fictícias bloqueadas.
+Menu principal: título, CANYON 01, VOO LIVRE, controles e sair. Voo livre inicia imediatamente acima do cânion, mantém colisões e física, mas desativa teto/alarme, percurso obrigatório, cronômetro, chegada e recorde. Reiniciar preserva o modo escolhido. Não mostrar fases fictícias bloqueadas.
 
-HUD: tempo atual, recorde, velocidade, potência, margem até o teto e indicador dos airbrakes. Mensagens de baixa velocidade e proximidade do teto devem ser legíveis sem depender apenas de cores.
+HUD: instrumentos laterais verde neon de velocidade indicada em km/h, Mach, altitude acima do piso (AGL) e potência. As fitas de velocidade/altitude deslizam continuamente sob índices fixos, com recorte das bordas. A distância restante ao longo do percurso aparece na lateral no modo corrida. Sem mira, mensagens ou cronômetro no centro. Contagem inicial na lateral. Cronômetro permanece ativo e é mostrado no resultado. Alerta de altitude sonoro e indicação lateral intermitente nos últimos 60 metros até o teto.
 
 Estados: Menu Principal, Preparação, Correndo, Pausado, Derrota e Vitória.
 
@@ -171,11 +171,13 @@ Situação da implementação: os sistemas abaixo estão escritos, com compilaç
 
 A cena inicial monta o jogo ao dar Play, sem importador externo. O menu `SkyRacers > 1 - Build Game Scene` permite gerar a versão editável com meshes e prefab persistentes. O comando de build Windows está no mesmo menu.
 
-O percurso atual tem aproximadamente 46,3 km e 501 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. O voo inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. A extensão foi aumentada para acomodar a velocidade supersônica. O tempo idealizado na velocidade máxima é de aproximadamente 127 segundos; manobras, aceleração e frenagens aumentam a duração real.
+O percurso atual tem aproximadamente 46,3 km e 1.001 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. A corrida inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. O voo livre inicia 595 unidades acima do piso no mesmo ponto de partida. A duração com a nova física deve ser medida em voo.
 
-Propulsão: aceleração-base 24, pós-combustão adicional 16 a 100% de potência, arrasto quadrático 0,00030 e arrasto adicional de airbrakes 0,00085. Em reta nivelada, a velocidade de equilíbrio com pós-combustão é aproximadamente 365 m/s (1.315 km/h). O Mach exibido usa referência fixa de 340 m/s para a atmosfera simplificada do jogo. A integração isolada da aceleração prevê aproximadamente 10,6 segundos de 170 m/s até Mach 1 após aplicar potência máxima; isso não inclui o tempo de avanço da manete nem curvas.
+Propulsão: aceleração-base 18 m/s² e pós-combustão adicional 10 m/s² a 100% de potência. O Mach usa referência fixa de 340 m/s. Massa de 12.000 kg, área de referência de 37,2 m² e densidade decrescente com altitude. Sustentação por ângulo de ataque e pressão dinâmica; arrasto de perfil, induzido, transônico, de derrapagem e dos airbrakes. W/S comandam taxa de pitch de até 75°/s, com proteção preditiva de ângulo de ataque e carga G. Ao soltar, o trim estabiliza o voo. Aceleração angular limitada a 480°/s² no pitch; roll até 150°/s. Pose usada na física vem de Rigidbody.rotation, sem atraso da interpolação visual. A gravidade e a orientação da sustentação produzem as curvas, sem realinhamento artificial da velocidade. Parâmetros ajustados para jogabilidade, não dados certificados do F/A-18.
 
-As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. Câmera, taxas de roll/pitch/yaw e assistência angular foram preservadas.
+O ensaio longitudinal de 20 s mantém voo neutro com desvio vertical de aproximadamente −5,7 m. O ensaio de 2 s puxando o nariz a plena potência altera a atitude em cerca de 75°. Com pós-combustão, o ensaio de 20 s chega a Mach 1,29. Esses testes exercitam as equações reais, mas não substituem a execução do Rigidbody, das colisões e dos controles no Unity.
+
+As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. A câmera foi preservada; taxas e controle angular foram revisados para a nova física.
 
 Sombras: perfil PC com distância 600, resolução 4096 e quatro cascatas; Mobile com distância 300, resolução 2048 e duas cascatas. O limite anterior era 50. A nova fase usa uma chave própria de recorde, preservando os dados antigos sem compará-los ao novo percurso.
 
@@ -186,3 +188,17 @@ Conforme o enunciado local `Projeto_3D_20262.docx.pdf`: entrega prevista até 25
 Jam indicada no enunciado: https://itch.io/jam/projeto-jogo-3d-insper-20262
 
 Os quatro eixos da avaliação são controles/câmera, desempenho/colisões, modelos/materiais/texturas e gerenciamento de estados/erros. A validação final deve cobrir os quatro.
+
+
+## Revisão de efeitos e cenário — 18/11/2026
+
+- Profundidade triplicada para 450 m, largura reduzida para aproximadamente 59–101 m no fundo. Postes removidos; chegada marcada no piso.
+- Duas cachoeiras com névoa, relevo com mais segmentos, normais suavizadas e detalhe procedural na superfície para reduzir o aspecto facetado.
+- Arco central de 22 × 438 m, com pilares altos e cabeceira próxima ao tabuleiro. A passagem exige alinhamento lateral.
+- HUD lateral verde neon de altitude, velocidade e potência; centro da tela livre. Alarme pulsado de altitude que cessa em pausa, derrota ou retorno à altitude segura.
+- Fumaça dos motores e trilhas nas pontas das asas com baixa opacidade.
+- Impacto separa as 74 meshes em destroços com colisores, gera fogo, fumaça, fragmentos e som; aguarda 2,5 s antes do resultado. Reiniciar restaura o avião e remove destroços.
+- Boom sônico e anel discreto de condensação somente na passagem de Mach < 1 para Mach >= 1 durante a run. Não dispara ao desacelerar, permanecer supersônico ou retomar de uma pausa.
+- Nova física assistida e modo livre para testes. Novo identificador de recorde para não misturar tempos da física anterior.
+
+Compilação C# e referências verificadas. Efeitos, som, desempenho e passagem pela ponte ainda precisam de playtest no Unity nesta revisão.

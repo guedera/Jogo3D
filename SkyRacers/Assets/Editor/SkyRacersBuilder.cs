@@ -140,13 +140,15 @@ namespace SkyRacers.Editor
             if (course.CrossedSector(1, course.route[1] + Vector3.up * 65 + Vector3.forward * 5, course.route[1] + Vector3.up * 65 - Vector3.forward * 5)) throw new Exception("Reverse sector accepted");
             var bridge = course.route[course.BridgeSector];
             if (!course.UnderBridge(bridge + Vector3.up * 65)) throw new Exception("Bridge cruise aperture blocked");
-            if (course.UnderBridge(bridge + Vector3.up * 110)) throw new Exception("Bridge overflight accepted");
+            if (!course.UnderBridge(bridge + Vector3.up * 300)) throw new Exception("Bridge upper aperture blocked");
+            if (course.UnderBridge(bridge + Vector3.up * (course.BridgeSpring + course.BridgeRise + 5))) throw new Exception("Bridge overflight accepted");
             if (course.UnderBridge(bridge + course.RightAt(course.BridgeSector) * 110 + Vector3.up * 45)) throw new Exception("Bridge bypass accepted");
             if (Mathf.Abs(course.CeilingAt(bridge) - course.FloorAt(bridge.z) - course.ceiling) > .01f) throw new Exception("Local ceiling mismatch");
             // The full flight envelope must be clear down the central arch.
             var along = Vector3.Cross(course.RightAt(course.BridgeSector), Vector3.up);
-            if (Physics.BoxCast(bridge + Vector3.up * 65 - along * 50, new Vector3(8, 3, 9), along, out _, Quaternion.LookRotation(along), 100, 1))
-                throw new Exception("Central bridge corridor intersects geometry");
+            foreach (float height in new[] { 65f, 200f, 350f })
+                if (Physics.BoxCast(bridge + Vector3.up * height - along * 50, new Vector3(8, 3, 9), along, out _, Quaternion.LookRotation(along), 100, 1))
+                    throw new Exception("Central bridge corridor intersects geometry at " + height);
             Debug.Log("SKYRACERS_VALIDATION_OK: floor, gates, bridge clearance/bypass and local ceiling; " + course.route.Length + " sectors");
         }
     }

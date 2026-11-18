@@ -32,7 +32,7 @@ namespace SkyRacers
         }
         void Cone(Vector3 baseCenter, float radius, float height, Color color)
         {
-            const int sides = 7;
+            const int sides = 11;
             for (int i = 0; i < sides; i++)
             {
                 float a = i * Mathf.PI * 2 / sides, b = (i + 1) * Mathf.PI * 2 / sides;
@@ -76,6 +76,13 @@ namespace SkyRacers
         {
             var mesh = new Mesh { name = name.Replace(' ', '_'), indexFormat = vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
             mesh.SetVertices(vertices); mesh.SetTriangles(triangles, 0); mesh.SetColors(colors); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            if(name.StartsWith("Alpine canyon"))
+            {
+                var averaged=new Dictionary<Vector3,Vector3>();var normals=mesh.normals;
+                for(int i=0;i<vertices.Count;i++) {averaged.TryGetValue(vertices[i],out var n);averaged[vertices[i]]=n+normals[i];}
+                for(int i=0;i<vertices.Count;i++)normals[i]=averaged[vertices[i]].normalized;
+                mesh.normals=normals;
+            }
             var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer)); go.transform.SetParent(parent, false);
             go.GetComponent<MeshFilter>().sharedMesh = mesh; go.GetComponent<MeshRenderer>().sharedMaterial = material;
             if (collision) go.AddComponent<MeshCollider>().sharedMesh = mesh;

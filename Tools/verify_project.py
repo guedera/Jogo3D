@@ -25,6 +25,21 @@ def validate_data():
     for index in (15, 31):
         assert model["nodes"][index]["rotation"] == dict(x=0, y=0, z=0, w=1), "Wing fold must remain neutral"
     assert triangles == 5351
+    # Validate the hinge coordinates actually consumed by AircraftFactory against
+    # vertices in the supplied asset, rather than assuming a cuboid's origin is a hinge.
+    factory = (ROOT / "Assets/Scripts/AircraftFactory.cs").read_text()
+    hinges = re.findall(r"AddHingedSurface\(mapped, nodes\[(\d+)\], new Vector3\(([^)]+)\), new Vector3\(([^)]+)\), FlightSurfaceRole\.(\w+), (-?\d+)\)", factory)
+    assert len(hinges) == 6, "Expected two ailerons, two flaps and two rudders"
+    assert len({int(h[0]) for h in hinges}) == 6, "Duplicate surface mesh"
+    for index, first, second, role, side in hinges:
+        assert int(index) not in (15, 31), "Wing fold must never be animated"
+        vertices = [tuple(v[a] for a in "xyz") for p in model["nodes"][int(index)]["parts"] for v in p["vertices"]]
+        ends = [tuple(float(x.strip().rstrip("f")) for x in point.split(",")) for point in (first, second)]
+        for point in ends:
+            assert min(math.dist(point, v) for v in vertices) < .015, (index, "hinge misses surface edge")
+        direction = 1 if role == "Rudder" else 0
+        assert ends[1][direction] > ends[0][direction], (index, "hinge axis reversed")
+    print("PASS: six surface hinges lie on asset edges; axis directions and fixed wing folds")
     known = set()
     for directory in (ROOT / "Assets", ROOT / "Library/PackageCache"):
         for meta in directory.rglob("*.meta"):
@@ -55,6 +70,22 @@ def compile_scripts():
             response_file.write_text("\n".join(args))
             subprocess.run([str(scripting / "NetCoreRuntime/dotnet"), str(compiler), "@" + str(response_file)], cwd=ROOT, check=True)
             print("PASS: C# compilation — " + folder)
+
+        # Execute the real scalar flight equations and HUD calculations in .NET.
+        # Unity physics/rendering still require a separate Play Mode test.
+        runtime_root = scripting / "NetCoreRuntime"
+        framework = next((runtime_root / "shared/Microsoft.NETCore.App").iterdir())
+        output = directory / "FlightChecks.dll"
+        response_file = directory / "FlightChecks.rsp"
+        args = ["-nologo", "-target:exe", "-nostdlib+", f'-out:"{output}"']
+        args += [f'-r:"{path}"' for path in framework.glob("*.dll")]
+        args += [f'"{ROOT / "Assets/Scripts" / name}"' for name in ("FlightDynamics.cs", "HudTape.cs", "FlightSurfaceMixer.cs")]
+        args += [f'"{ROOT.parent / "Tools/FlightChecks.cs"}"']
+        response_file.write_text("\n".join(args))
+        subprocess.run([str(runtime_root / "dotnet"), str(compiler), "@" + str(response_file)], check=True)
+        output.with_suffix(".runtimeconfig.json").write_text(json.dumps({"runtimeOptions": {
+            "tfm": "net8.0", "framework": {"name": "Microsoft.NETCore.App", "version": framework.name}}}))
+        subprocess.run([str(runtime_root / "dotnet"), str(output)], check=True)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,9 @@ namespace SkyRacers
         {
             public Transform part;
             public Vector3 axis = Vector3.right;
-            public float pitch, roll, yaw, brake;
+            public FlightSurfaceRole role;
+            public int side;
+            public float degreesPerSecond = 100;
             public Quaternion neutral = Quaternion.identity;
             [NonSerialized] public float angle;
         }
@@ -51,12 +53,13 @@ namespace SkyRacers
         {
             if (flight == null) return;
             bool running = flight.Run != null && flight.Run.State == RunState.Running;
+            float autoFlap = FlightSurfaceMixer.AutoFlap(flight.Speed, flight.AngleOfAttack);
             foreach (var s in surfaces)
             {
                 if (s.part == null) continue;
                 var a = flight.Input.Axes;
-                float target = a.x * s.pitch + a.z * s.roll + a.y * s.yaw + flight.Airbrake * s.brake;
-                s.angle = Mathf.Lerp(s.angle, target, 1 - Mathf.Exp(-10 * Time.deltaTime));
+                float target = running ? FlightSurfaceMixer.Deflection(s.role, s.side, a.x, a.z, a.y, flight.Airbrake, autoFlap) : 0;
+                s.angle = Mathf.MoveTowards(s.angle, target, s.degreesPerSecond * Time.deltaTime);
                 s.part.localRotation = s.neutral * Quaternion.AngleAxis(s.angle, s.axis);
             }
             burnerBlend = Mathf.MoveTowards(burnerBlend, flight.Afterburner ? 1 : 0, Time.deltaTime * 5);

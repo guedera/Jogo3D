@@ -27,7 +27,7 @@ namespace SkyRacers
         }
         void LateUpdate()
         {
-            if (target == null || Time.timeScale == 0) return;
+            if (target == null || Time.timeScale == 0 || (target.Run != null && target.Run.State == RunState.Failed)) return;
             transform.position = Vector3.SmoothDamp(transform.position, DesiredPosition(), ref smoothVelocity, .12f);
             Aim(1 - Mathf.Exp(-9 * Time.deltaTime));
             lens.fieldOfView = Mathf.Lerp(lens.fieldOfView, Mathf.Lerp(57, 69, Mathf.InverseLerp(45, 125, target.Speed)), Time.deltaTime * 2);

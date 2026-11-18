@@ -55,16 +55,23 @@ namespace SkyRacers
                 var collider = root.AddComponent<BoxCollider>(); collider.center = b.center;
                 collider.size = new Vector3(Mathf.Max(.3f, b.size.x), Mathf.Max(.5f, b.size.y), Mathf.Max(.3f, b.size.z));
             }
-            root.AddComponent<FlightInput>(); root.AddComponent<FlightController>();
+            root.AddComponent<FlightInput>(); root.AddComponent<FlightController>(); root.AddComponent<FlightEffects>();
             var surfaces = root.AddComponent<AircraftVisuals>();
             var mapped = new List<AircraftVisuals.Surface>();
             // Explicit node IDs from inspection of the supplied hierarchy.
-            AddSurface(mapped, nodes[34], Vector3.right, -20, 17, 0, 12);
-            AddSurface(mapped, nodes[36], Vector3.right, -20, -17, 0, 12);
-            AddSurface(mapped, nodes[41], Vector3.up, 0, 0, 24, -23);
-            AddSurface(mapped, nodes[45], Vector3.up, 0, 0, 24, 23);
-            // The model has no isolated dorsal speedbrake. Differential rudder and
-            // stabilator deflection represents the F18's surface braking visually.
+            AddSurface(mapped, nodes[34], Vector3.right, FlightSurfaceRole.Stabilator, 1, 120);
+            AddSurface(mapped, nodes[36], Vector3.right, FlightSurfaceRole.Stabilator, -1, 120);
+            // The flap meshes have modelling origins, not hinge pivots. Endpoints
+            // below are on their actual forward edges in mesh-local coordinates.
+            AddHingedSurface(mapped, nodes[12], new Vector3(-.2625f,.15625f,-.04375f), new Vector3(.1625f,.15625f,0), FlightSurfaceRole.Aileron, -1);
+            AddHingedSurface(mapped, nodes[28], new Vector3(-.1625f,.15625f,0), new Vector3(.2625f,.15625f,-.04375f), FlightSurfaceRole.Aileron, 1);
+            AddHingedSurface(mapped, nodes[10], new Vector3(-.5f,.15625f,-.36836f), new Vector3(.21875f,.15625f,-.24795f), FlightSurfaceRole.TrailingFlap, -1);
+            AddHingedSurface(mapped, nodes[22], new Vector3(-.21875f,.15625f,-.24795f), new Vector3(.5f,.15625f,-.36836f), FlightSurfaceRole.TrailingFlap, 1);
+            // Use the swept, canted rudder hinge rather than a world-vertical axis.
+            AddHingedSurface(mapped, nodes[40], new Vector3(-.0121f,.00037f,.06343f), new Vector3(-.02713f,.3918f,-.07003f), FlightSurfaceRole.Rudder, 1);
+            AddHingedSurface(mapped, nodes[44], new Vector3(.0121f,.00037f,.06343f), new Vector3(.02713f,.3918f,-.07003f), FlightSurfaceRole.Rudder, -1);
+            // Braking mixes the available surfaces; no isolated dorsal speedbrake
+            // or separate leading-edge flap exists in this asset.
             // Fold hinges (nodes 15 and 31) remain at the extended rest pose.
             surfaces.surfaces = mapped.ToArray();
             surfaces.exhausts = new Transform[2];
@@ -88,8 +95,17 @@ namespace SkyRacers
             Debug.Log($"F18 bounds: {bounds.size}; import scale: {scale:F3}");
             return root;
         }
-        static void AddSurface(List<AircraftVisuals.Surface> list, Transform part, Vector3 axis, float pitch, float roll, float yaw, float brake)
-        { list.Add(new AircraftVisuals.Surface { part = part, axis = axis, neutral = part.localRotation, pitch = pitch, roll = roll, yaw = yaw, brake = brake }); }
+        static void AddSurface(List<AircraftVisuals.Surface> list, Transform part, Vector3 axis, FlightSurfaceRole role, int side, float rate)
+        { list.Add(new AircraftVisuals.Surface { part = part, axis = axis.normalized, neutral = part.localRotation, role = role, side = side, degreesPerSecond = rate }); }
+        static void AddHingedSurface(List<AircraftVisuals.Surface> list, Transform mesh, Vector3 first, Vector3 second, FlightSurfaceRole role, int side)
+        {
+            var hinge = new GameObject(role + (side < 0 ? " left hinge" : " right hinge")).transform;
+            hinge.SetParent(mesh.parent, false);
+            hinge.SetPositionAndRotation(mesh.TransformPoint((first + second) * .5f), mesh.rotation);
+            // Preserve every vertex in the neutral pose, then rotate just this piece.
+            mesh.SetParent(hinge, true);
+            AddSurface(list, hinge, (second - first).normalized, role, side, role == FlightSurfaceRole.TrailingFlap ? 65 : 120);
+        }
         static Mesh ExhaustMesh(int engine)
         {
             const int sides = 16, rings = 8;

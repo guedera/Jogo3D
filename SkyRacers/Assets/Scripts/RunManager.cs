@@ -18,8 +18,13 @@ namespace SkyRacers
         public float Countdown { get; private set; }
         public int NextSector { get; private set; } = 1;
         public bool NewRecord { get; private set; }
+        public bool IsFreeFlight { get; private set; }
+        public float RemainingDistance => Aircraft == null ? Course.TotalDistance : Course.DistanceRemaining(Aircraft.Body.position, NextSector);
         public string Reason { get; private set; }
         public float Progress => Mathf.Clamp01((float)(NextSector - 1) / (Course.route.Length - 1));
+        float crashUntil;
+        public bool ShowingCrash => State == RunState.Failed && Time.time < crashUntil;
+        bool crashMenuPending;
         RunState pausedFrom;
         Vector3 previousPosition;
 
@@ -31,16 +36,25 @@ namespace SkyRacers
             Aircraft.name = "Player F18"; Aircraft.Run = this;
             chaseCamera.target = Aircraft; ui.Initialize(this); MainMenu();
         }
-        public void StartRun()
+        public void StartRun() => StartFlight(false);
+        public void StartFreeFlight() => StartFlight(true);
+        public void RestartFlight() => StartFlight(IsFreeFlight);
+        void StartFlight(bool freeFlight)
         {
-            Time.timeScale = 1; State = RunState.Countdown; Countdown = 3;
+            crashUntil=0; crashMenuPending=false;
+            IsFreeFlight = freeFlight;
+            Time.timeScale = 1; State = freeFlight ? RunState.Running : RunState.Countdown; Countdown = freeFlight ? 0 : 3;
             Elapsed = 0; NextSector = 1; NewRecord = false; Reason = "";
-            Aircraft.ResetFlight(Course.Spawn, Course.SpawnRotation);
-            previousPosition = Course.Spawn; Physics.SyncTransforms(); chaseCamera.Snap();
+            Vector3 spawn = Course.Spawn + (freeFlight ? Vector3.up * (Course.ceiling + 80) : Vector3.zero);
+            Aircraft.ResetFlight(spawn, Course.SpawnRotation);
+            if (freeFlight) Aircraft.Launch();
+            previousPosition = spawn; Physics.SyncTransforms(); chaseCamera.Snap();
             Cursor.visible = false; ui.RefreshState();
         }
         public void MainMenu()
         {
+            crashUntil=0; crashMenuPending=false;
+            IsFreeFlight = false;
             Time.timeScale = 1; State = RunState.Menu; Elapsed = 0;
             Aircraft.ResetFlight(Course.Spawn, Course.SpawnRotation);
             Physics.SyncTransforms(); chaseCamera.Snap(); Cursor.visible = true; ui.RefreshState();
@@ -48,6 +62,7 @@ namespace SkyRacers
         void Update()
         {
             if (Aircraft == null) return;
+            if(crashMenuPending && !ShowingCrash) {crashMenuPending=false;ui.RefreshState();}
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if (State == RunState.Paused) Resume();
@@ -61,7 +76,7 @@ namespace SkyRacers
             }
             // Physics and collision callbacks have finished before Update. A collision
             // therefore wins over a finish crossing in the same simulation step.
-            if (State == RunState.Running)
+            if (State == RunState.Running && !IsFreeFlight)
             {
                 var current = Aircraft.Body.position;
                 if (Aircraft.HighestPoint >= Course.CeilingAt(current)) { Fail("Você ultrapassou o topo do cânion."); return; }
@@ -78,7 +93,7 @@ namespace SkyRacers
             }
             ui.UpdateTelemetry();
         }
-        void FixedUpdate() { if (State == RunState.Running) Elapsed += Time.fixedDeltaTime; }
+        void FixedUpdate() { if (State == RunState.Running && !IsFreeFlight) Elapsed += Time.fixedDeltaTime; }
         public void Pause()
         {
             if (State != RunState.Running && State != RunState.Countdown) return;
@@ -89,6 +104,14 @@ namespace SkyRacers
         {
             if (State != RunState.Paused) return;
             State = pausedFrom; Time.timeScale = 1; Cursor.visible = false; ui.RefreshState();
+        }
+        public void Crash()
+        {
+            if(State!=RunState.Running)return;
+            Vector3 velocity=Aircraft.Body.linearVelocity;
+            Reason="Colisão com o cânion.";State=RunState.Failed;crashUntil=Time.time+2.5f;crashMenuPending=true;
+            Aircraft.Freeze();Aircraft.GetComponent<FlightEffects>()?.BreakApart(velocity);
+            Cursor.visible=true;ui.RefreshState();
         }
         public void Fail(string reason)
         {
