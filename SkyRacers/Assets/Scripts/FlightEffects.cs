@@ -15,6 +15,7 @@ namespace SkyRacers
         GameObject visual;
         AudioSource alarm, sounds;
         AudioClip alarmClip, crashClip, boomClip;
+        Material wingTrailMaterial;
         float previousMach;
         bool broken;
         public static Material VfxMaterial => Resources.Load<Material>("FlightVFX");
@@ -29,21 +30,38 @@ namespace SkyRacers
             alarm.clip=alarmClip;
             foreach(var nozzle in GetComponent<AircraftVisuals>().exhausts)
             {
-                var ps=Particles("Engine haze",nozzle.parent.position,transform,new Color(.56f,.61f,.65f,.035f),1.3f,.65f,1);
-                var emission=ps.emission; emission.rateOverTime=5; smoke.Add(ps);
+                var ps=Particles("Engine haze",nozzle.parent.position-nozzle.parent.forward*.2f,transform,new Color(.53f,.58f,.62f,.16f),.65f,1.3f,5);
+                ps.transform.localRotation=Quaternion.Euler(0,180,0);
+                var shape=ps.shape;shape.shapeType=ParticleSystemShapeType.Cone;shape.angle=7;shape.radius=.16f;
+                var main=ps.main;main.maxParticles=512;
+                var emission=ps.emission;emission.rateOverTime=18;emission.rateOverDistance=.85f;emission.enabled=false;
+                smoke.Add(ps);
             }
+            wingTrailMaterial=new Material(VfxMaterial) {name="Wing vapour ribbon"};
+            wingTrailMaterial.SetFloat("_Ribbon",1);
             Vector3 left=Vector3.zero,right=Vector3.zero;
+            var vertices=new List<Vector3>();
             foreach(var filter in visual.GetComponentsInChildren<MeshFilter>())
             foreach(var vertex in filter.sharedMesh.vertices)
             {
                 Vector3 local=transform.InverseTransformPoint(filter.transform.TransformPoint(vertex));
+                vertices.Add(local);
                 if(local.x<left.x)left=local;if(local.x>right.x)right=local;
+            }
+            // Pick the aft end of each wingtip, not whichever extreme vertex is first.
+            float leftEdge=left.x,rightEdge=right.x;
+            foreach(var vertex in vertices)
+            {
+                if(vertex.x<=leftEdge+.03f && vertex.z<left.z)left=vertex;
+                if(vertex.x>=rightEdge-.03f && vertex.z<right.z)right=vertex;
             }
             foreach(var tip in new[]{left,right})
             {
                 var go=new GameObject("Subtle wing vapour");go.transform.SetParent(transform,false);go.transform.localPosition=tip;
-                var trail=go.AddComponent<TrailRenderer>();trail.sharedMaterial=VfxMaterial;trail.time=.32f;trail.minVertexDistance=.8f;
-                trail.startWidth=.065f;trail.endWidth=0;trail.startColor=new Color(.83f,.91f,1,.065f);trail.endColor=new Color(.83f,.91f,1,0);
+                var trail=go.AddComponent<TrailRenderer>();trail.sharedMaterial=wingTrailMaterial;trail.time=.5f;trail.minVertexDistance=.5f;
+                trail.alignment=LineAlignment.View;trail.textureMode=LineTextureMode.Stretch;
+                trail.numCornerVertices=2;trail.numCapVertices=2;
+                trail.startWidth=.14f;trail.endWidth=0;trail.startColor=new Color(.86f,.93f,1,.24f);trail.endColor=new Color(.86f,.93f,1,0);
                 trail.shadowCastingMode=ShadowCastingMode.Off;trail.receiveShadows=false;trail.emitting=false;trails.Add(trail);
             }
         }
@@ -52,8 +70,15 @@ namespace SkyRacers
             if(plane==null||plane.Run==null)return;
             bool active=plane.Run.State==RunState.Running;
             if(plane.Run.State==RunState.Paused)sounds.Pause();else sounds.UnPause();
-            foreach(var ps in smoke) {var e=ps.emission;e.enabled=active&&!broken; if(!active)ps.Clear();}
-            foreach(var trail in trails) {trail.emitting=active&&!broken;if(!active)trail.Clear();}
+            bool paused=plane.Run.State==RunState.Paused;
+            foreach(var ps in smoke)
+            {
+                var e=ps.emission;e.enabled=active&&!broken&&plane.Throttle>.04f;
+                if(paused) {if(!ps.isPaused)ps.Pause();}
+                else if(active&&!broken) {if(!ps.isPlaying)ps.Play();}
+                else ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+            foreach(var trail in trails) {trail.emitting=active&&!broken;if(!active&&!paused)trail.Clear();}
             float margin=plane.Run.Course.CeilingAt(transform.position)-plane.HighestPoint;
             bool danger=active&&!plane.Run.IsFreeFlight&&margin<60;
             if(danger) {alarm.pitch=margin<25?1.5f:1;if(!alarm.isPlaying)alarm.Play();}
@@ -110,7 +135,12 @@ namespace SkyRacers
             foreach(var go in debris)if(go!=null)Destroy(go);debris.Clear();
             if(visual!=null)visual.SetActive(true);
             if(hull!=null)foreach(var c in hull)c.enabled=true;
-            foreach(var ps in smoke)ps.Clear();foreach(var t in trails)t.Clear();
+            foreach(var ps in smoke)
+            {
+                var emission=ps.emission;emission.enabled=false;
+                ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+            foreach(var t in trails) {t.emitting=false;t.Clear();}
             if(alarm!=null)alarm.Stop();if(sounds!=null)sounds.Stop();
         }
         public static ParticleSystem Particles(string name,Vector3 position,Transform parent,Color color,float life,float size,float speed)
@@ -137,6 +167,6 @@ namespace SkyRacers
             }
             var clip=AudioClip.Create(name,data.Length,1,rate,false);clip.SetData(data,0);return clip;
         }
-        void OnDestroy(){if(alarmClip!=null)Destroy(alarmClip);if(crashClip!=null)Destroy(crashClip);if(boomClip!=null)Destroy(boomClip);foreach(var go in debris)if(go!=null)Destroy(go);}
+        void OnDestroy(){if(wingTrailMaterial!=null)Destroy(wingTrailMaterial);if(alarmClip!=null)Destroy(alarmClip);if(crashClip!=null)Destroy(crashClip);if(boomClip!=null)Destroy(boomClip);foreach(var go in debris)if(go!=null)Destroy(go);}
     }
 }

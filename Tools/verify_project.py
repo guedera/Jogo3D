@@ -46,7 +46,7 @@ def validate_data():
             match = re.search(r"^guid: ([0-9a-f]{32})", meta.read_text(errors="ignore"), re.M)
             if match:
                 known.add(match[1])
-    files = [ROOT / "Assets/Scenes/CanyonRun.unity", *(ROOT / "Assets/Game/Materials").glob("*.mat")]
+    files = [ROOT / "Assets/Scenes/CanyonRun.unity", *(ROOT / "Assets/Game/Materials").glob("*.mat"), *(ROOT / "Assets/Resources").glob("*.mat")]
     for file in files:
         for guid in re.findall(r"guid: ([0-9a-f]{32})", file.read_text()):
             assert guid in known or guid.startswith("0000000000000000"), (file, guid)

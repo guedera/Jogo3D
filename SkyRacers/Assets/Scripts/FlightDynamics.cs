@@ -31,8 +31,14 @@ namespace SkyRacers
             float rate = input < 0 ? Math.Max(requestedRate, envelopeRate) : Math.Min(requestedRate, envelopeRate);
             return Clamp(rate, -maxRate, maxRate);
         }
-        public static float StepAngularRate(float current, float target, float acceleration, float dt)
-            => current + Clamp(target - current, -acceleration * dt, acceleration * dt);
+        public const float AngularResponseTime = .035f;
+        public static float StepAngularRate(float current, float target, float acceleration, float dt, float responseTime = AngularResponseTime)
+        {
+            // Just 35 ms of angular lag: soften engagement/release without changing
+            // the sustained rate or the available G. Exponential response is timestep-aware.
+            float blend = responseTime > 0 ? 1 - (float)Math.Exp(-dt / responseTime) : 1;
+            return current + Clamp((target - current) * blend, -acceleration * dt, acceleration * dt);
+        }
         public static float LiftCoefficient(float alpha)
         {
             // Linear lift slope, followed by a progressive stall above 27 degrees.

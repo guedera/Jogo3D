@@ -129,3 +129,13 @@ Base das equações de sustentação e arrasto: [NASA — Lift to Drag Ratio](ht
 Referências consultadas: [VAZGRIZ — Flight Simulator in Unity3D](https://vazgriz.com/346/flight-simulator-in-unity3d-part-1/), [Aircraft Physics](https://github.com/gasgiant/Aircraft-Physics), [NASA — F-18 HARV](https://www.nasa.gov/reference/f-18-harv/) e [Unity — AddTorque](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rigidbody/addtorque). Implementação própria; nenhum pacote externo foi importado.
 
 No próximo Play, testar W/S com toques curtos e depois segurando, em cruzeiro e acima de Mach 1. Verificar A/D nos ailerons e estabilizadores, Q/E nos lemes e X nos flaps; a animação deve voltar ao neutro/posição automática após soltar.
+
+
+## Ajuste de efeitos e inércia — 19/11/2026
+
+- Fumaça com emissão por distância (0,85 partícula/m + 18/s), opacidade 0,16, diâmetro inicial de até 1,3 m e duração de 0,65 s. Emissores ficam atrás dos bocais e apontam para trás. O teto de 512 partículas por motor acomoda o voo supersônico.
+- Rastro nas extremidades traseiras das asas com largura de 0,14 m, opacidade inicial 0,24 e duração de 0,5 s. Máscara de faixa com bordas suaves substitui a máscara circular, preservando o trecho que nasce junto à asa. O material de partículas continua circular para fumaça, cachoeiras e explosões.
+- Transição angular de 35 ms na entrada/saída dos comandos, mantendo taxas máximas, limites G e forças. Ensaios em três velocidades mantêm o pitch dentro de 5% da versão sem suavização; saída e inversão dos comandos continuam rápidas.
+- Pausa preserva os rastros existentes; reiniciar limpa os efeitos e reinicia os emissores, evitando emissão por distância durante o teleporte.
+
+Compilação C#, referências e testes numéricos passaram. Conferir em Play Mode a visibilidade sobre rocha/neve/céu e a sensação da pequena inércia, especialmente ao soltar A/D e W/S. Não houve validação gráfica nesta revisão.

@@ -12,6 +12,7 @@ static class FlightChecks
     sealed class Rig
     {
         public float vx = 170, vy, altitude = 600, theta, angular, maxLoad, load;
+        public float responseTime = FlightDynamics.AngularResponseTime;
         public float Speed => (float)Math.Sqrt(vx * vx + vy * vy);
         public void Step(float pitch, float throttle, float brake, float dt = .02f)
         {
@@ -26,7 +27,7 @@ static class FlightChecks
             float thrust = (18 * throttle + (throttle >= .995f ? 10 : 0)) * (.45f + .55f * density / 1.225f);
             float rate = FlightDynamics.PitchRate(pitch, alpha, lift, -9.81f * (float)Math.Cos(gamma), speed, q, 75 * (float)Math.PI / 180);
             rate *= FlightDynamics.Clamp((speed - 25) / 85, 0, 1);
-            angular = FlightDynamics.StepAngularRate(angular, rate, 480 * (float)Math.PI / 180, dt);
+            angular = FlightDynamics.StepAngularRate(angular, rate, 480 * (float)Math.PI / 180, dt, responseTime);
             theta -= angular * dt;
             vx += (thrust * (float)Math.Cos(theta) - drag * (float)Math.Cos(gamma) - lift * (float)Math.Sin(gamma)) * dt;
             vy += (thrust * (float)Math.Sin(theta) - drag * (float)Math.Sin(gamma) + lift * (float)Math.Cos(gamma) - 9.81f) * dt;
@@ -67,6 +68,8 @@ static class FlightChecks
         {
             var up = new Rig { vx = initial }; up.Fly(2, -1, 1);
             var down = new Rig { vx = initial }; down.Fly(2, 1, 1);
+            var immediate = new Rig { vx = initial, responseTime = 0 }; immediate.Fly(2, -1, 1);
+            Check(Math.Abs(up.theta-immediate.theta) < Math.Abs(immediate.theta)*.05f, "Inertia must preserve the approved pitch authority");
             Check(up.theta > (initial < 200 ? 1.1f : .4f), "Weak S response at " + initial);
             Check(down.theta < (initial < 200 ? -.5f : -.2f), "Weak W response at " + initial);
             var pulse = new Rig { vx = initial }; pulse.Fly(.2f, -1, .62f);
@@ -78,6 +81,16 @@ static class FlightChecks
         }
         var loop = new Rig(); loop.Fly(15, -1, 1);
         Check(float.IsFinite(loop.Speed) && loop.theta > Math.PI, "Sustained pitch cannot pass vertical");
+        float residual = FlightDynamics.StepAngularRate(1, 0, 20, .02f);
+        Check(residual > .4f && residual < .7f, "Release must leave only a short angular tail");
+        for(int i=0;i<10;i++)residual=FlightDynamics.StepAngularRate(residual,0,20,.02f);
+        Check(residual < .003f, "Angular inertia must settle promptly after release");
+        float onset=FlightDynamics.StepAngularRate(0,1,20,.02f);
+        Check(onset >= .39f, "Small inertia must not make input sluggish");
+        float reversed=1;
+        for(int i=0;i<10;i++)reversed=FlightDynamics.StepAngularRate(reversed,-1,20,.02f);
+        Check(reversed < -.98f, "Countersteering must retain authority");
+        Console.WriteLine("PASS: subtle angular inertia, prompt release/countersteer and preserved pitch authority (within 5%)");
         foreach (var role in new[] { FlightSurfaceRole.Aileron, FlightSurfaceRole.Stabilator, FlightSurfaceRole.TrailingFlap })
         {
             float left = FlightSurfaceMixer.Deflection(role, -1, 0, 1, 0, 0, 0);
