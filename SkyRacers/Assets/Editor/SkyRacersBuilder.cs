@@ -136,9 +136,32 @@ namespace SkyRacers.Editor
                 if (!Physics.Raycast(course.route[i] + Vector3.up * 65, Vector3.down, out _, 80, 1)) throw new Exception("Floor gap at sector " + i);
                 if (i > 0 && !course.CrossedSector(i, course.route[i] - (course.route[i] - course.route[i - 1]).normalized * 4 + Vector3.up * 65,
                     course.route[i] + (course.route[i] - course.route[i - 1]).normalized * 4 + Vector3.up * 65)) throw new Exception("Invalid sector " + i);
+                var tangent = Vector3.Cross(course.RightAt(i), Vector3.up);
+                var high = course.route[i] + Vector3.up * (course.ceiling + 100);
+                if (i>0 && i<course.route.Length-1 && !course.CrossedSector(i, high + tangent * 4, high - tangent * 4, true))
+                    throw new Exception("Return sector or above-ceiling crossing rejected at " + i);
             }
             if (course.CrossedSector(1, course.route[1] + Vector3.up * 65 + Vector3.forward * 5, course.route[1] + Vector3.up * 65 - Vector3.forward * 5)) throw new Exception("Reverse sector accepted");
+            foreach(int sector in new[]{0,course.route.Length-1})
+            {
+                var tangent=Vector3.Cross(course.RightAt(sector),Vector3.up);
+                var center=course.route[sector]+Vector3.up*65;
+                bool returning=sector==0;
+                var direction=tangent*(returning?-1:1);
+                if(!course.CrossedSector(sector,center-direction*5,center+direction*5,returning))
+                    throw new Exception("Mission arch opening rejected");
+                center+=Vector3.up*500;
+                if(course.CrossedSector(sector,center-direction*5,center+direction*5,returning))
+                    throw new Exception("Mission arch overflight accepted");
+            }
+            foreach(float x in new[] {-12000f,12000f})
+            foreach(float z in new[] {-8000f,0f,20000f,40000f,52000f})
+                if(!Physics.Raycast(new Vector3(x,4000,z),Vector3.down,out _,5000,1))
+                    throw new Exception("Outer mountain terrain gap at " + x + ", " + z);
             var bridge = course.route[course.BridgeSector];
+            foreach(float offset in new[] {-3.5f,3.5f})
+                if(!course.UnderBridge(bridge+course.RightAt(course.BridgeSector)*offset+Vector3.up*65))
+                    throw new Exception("Valid off-centre bridge passage rejected");
             if (!course.UnderBridge(bridge + Vector3.up * 65)) throw new Exception("Bridge cruise aperture blocked");
             if (!course.UnderBridge(bridge + Vector3.up * 300)) throw new Exception("Bridge upper aperture blocked");
             if (course.UnderBridge(bridge + Vector3.up * (course.BridgeSpring + course.BridgeRise + 5))) throw new Exception("Bridge overflight accepted");
@@ -146,10 +169,12 @@ namespace SkyRacers.Editor
             if (Mathf.Abs(course.CeilingAt(bridge) - course.FloorAt(bridge.z) - course.ceiling) > .01f) throw new Exception("Local ceiling mismatch");
             // The full flight envelope must be clear down the central arch.
             var along = Vector3.Cross(course.RightAt(course.BridgeSector), Vector3.up);
+            if (!course.CrossedBridgePlane(bridge + along * 25 + Vector3.up * 65, bridge - along * 25 + Vector3.up * 65, out var returnCrossing, true)
+                || !course.UnderBridge(returnCrossing)) throw new Exception("Return bridge crossing rejected");
             foreach (float height in new[] { 65f, 200f, 350f })
                 if (Physics.BoxCast(bridge + Vector3.up * height - along * 50, new Vector3(8, 3, 9), along, out _, Quaternion.LookRotation(along), 100, 1))
                     throw new Exception("Central bridge corridor intersects geometry at " + height);
-            Debug.Log("SKYRACERS_VALIDATION_OK: floor, gates, bridge clearance/bypass and local ceiling; " + course.route.Length + " sectors");
+            Debug.Log("SKYRACERS_VALIDATION_OK: floor, outbound/return gates, high-altitude crossings, bridge clearance/bypass and local ceiling; " + course.route.Length + " sectors");
         }
     }
 }

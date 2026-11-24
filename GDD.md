@@ -2,18 +2,18 @@
 
 ## Estado atual
 
-Atualizado em 18/11/2026. Implementado em Unity 6000.6.6f1, URP e Input System. A revisão inclui nova física assistida, voo livre, fitas móveis no HUD e ponte com vão alto. Compilação, referências e testes numéricos passaram; validação em Play Mode e build Windows permanecem pendentes.
+Atualizado em 24/11/2026. Implementado em Unity 6000.6.6f1, URP e Input System. A revisão inclui missão de ida e volta, SAMs, dez flares, mapa independente de voo livre, controle e menu de operações. Compilação, referências e testes numéricos passaram; validação em Play Mode e build Windows permanecem pendentes.
 
 ## Conceito e escopo
 
-Jogo 3D de corrida aérea solo com uma única fase. O jogador começa pilotando um caça inspirado no F/A-18, já em voo dentro de um cânion, e precisa chegar ao final no menor tempo possível. A dificuldade vem das curvas, da gestão da velocidade e da obrigação de permanecer abaixo do topo do cânion.
+Jogo 3D de corrida aérea solo com uma única fase. O jogador começa pilotando um caça inspirado no F/A-18, já em voo dentro de um cânion, e precisa completar a ida e retornar à base no menor tempo possível. A dificuldade vem das curvas, da gestão da velocidade e da defesa antiaérea: na volta, ultrapassar o teto expõe o jogador a mísseis.
 
 Decisões confirmadas:
 
 - Câmera em terceira pessoa atrás do avião.
 - Pilotagem semirrealista com sustentação dependente de velocidade e ângulo de ataque, arrasto induzido e controle assistido para teclado. Resposta rápida de roll, limite de −5/+10,5 G (envelope de jogo) e estol progressivo.
 - Cronômetro crescente e recorde de menor tempo; não há contagem regressiva para derrota.
-- Uma run bem executada deve durar aproximadamente 2–3 minutos.
+- O percurso completo tem aproximadamente 92,6 km; a duração será medida em playtest, incluindo a curva de retorno e a evasão.
 - Modelo do caça fornecido pelo usuário; cenário construído no projeto.
 - Superfícies móveis animadas durante o voo. Dobra das asas desativada, mantendo-as estendidas.
 - Airbrakes acionados enquanto X estiver pressionado.
@@ -21,14 +21,14 @@ Decisões confirmadas:
 ## Regras da fase
 
 1. Começar em voo, alinhado com o corredor inicial, com velocidade e potência suficientes para sustentar o avião.
-2. Percorrer o cânion na ordem do trajeto até a chegada.
+2. Percorrer os setores até o marco final, fazer a curva manualmente e retornar pelos setores na ordem inversa.
 3. Colidir com o chão, paredes ou obstáculos encerra a run.
-4. Ultrapassar o teto de altitude do cânion encerra a run.
-5. Cruzar a chegada após completar o percurso encerra o cronômetro e mostra a vitória.
+4. Ultrapassar o teto não encerra a run: na volta, permite aquisição e lançamento de SAMs quando há visão direta. Na ida há apenas aviso.
+5. Cruzar a base após completar ida e volta encerra o cronômetro e mostra a vitória; o extremo do cânion nunca encerra a missão.
 6. Salvar o melhor tempo localmente apenas em runs concluídas e válidas.
-7. Reiniciar restaura avião, câmera, potência, superfícies móveis, percurso e cronômetro.
+7. Reiniciar restaura avião, câmera, potência, superfícies móveis, percurso, cronômetro e dez flares, eliminando mísseis e destroços.
 
-Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 450 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal; contorná-la encerra a run.
+Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 450 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal nos dois sentidos; contorná-la encerra a run.
 
 ## Controles
 
@@ -40,7 +40,11 @@ Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de
 | A / D | Roll para esquerda / direita |
 | S / W | Pitch: levantar / abaixar o nariz |
 | Q / E | Yaw para esquerda / direita |
+| F | Soltar um flare (dez por voo) |
+| Setas | Olhar ao redor |
 | Esc | Pausar e abrir menu; durante a pausa, voltar à run |
+
+Controle: R2/L2 aumentam/diminuem potência; X (PlayStation) ou A (Xbox) aciona airbrakes; analógico esquerdo faz roll/pitch (puxar sobe); R1/L1 fazem yaw; analógico direito controla câmera; círculo/B solta flare; Options/Start pausa. Menus aceitam D-pad/analógico e X/A para confirmar.
 
 A potência permanece no valor selecionado ao soltar Shift/Ctrl, limitada a 0–100%. Inputs opostos simultâneos se anulam. S levanta o nariz como padrão inicial de controle aeronáutico.
 
@@ -56,17 +60,17 @@ Usar um Rigidbody e atualizar a física em FixedUpdate. A potência governa o em
 - Amortecimento e assistência moderados mantêm a pilotagem acessível.
 - Limitar respostas extremas e ajustar os parâmetros por playtest, sem tentar reproduzir um simulador completo.
 
-Definir largura das curvas, velocidade de cruzeiro e extensão do percurso em conjunto. A duração de 2–3 minutos será medida em voo; não será inferida apenas do comprimento do cenário.
+Definir largura das curvas, velocidade de cruzeiro e extensão do percurso em conjunto. A duração da ida e volta será medida em voo; não será inferida apenas do comprimento do cenário.
 
 ## Câmera e leitura espacial
 
 Câmera suavizada atrás e acima do caça, com antecipação na direção do movimento. Acompanhar parcialmente o roll para transmitir inclinação sem tornar o horizonte difícil de ler. Ajustar distância e campo de visão discretamente conforme a velocidade.
 
-Evitar atravessar paredes usando detecção entre o avião e a posição desejada da câmera. Reposicionar imediatamente ao reiniciar, sem interpolar desde o ponto da colisão. Garantir visibilidade das pontas das asas e das próximas curvas.
+Evitar atravessar paredes usando detecção entre o avião e a posição desejada da câmera. Reposicionar imediatamente ao reiniciar, sem interpolar desde o ponto da colisão. Garantir visibilidade das pontas das asas e das próximas curvas. Setas/analógico direito orbitam a câmera; após dez segundos sem comando de câmera, ela retorna suavemente ao centro. Pausa congela esse tempo; reiniciar centraliza imediatamente.
 
 ## Cenário
 
-Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, riacho, neve parcial e montanhas ao fundo. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 60% em relação à primeira versão alpina. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
+Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, neve parcial, duas cachoeiras e montanhas ao fundo. O riacho foi removido. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 60% em relação à primeira versão alpina. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
 
 Há uma única ponte de pedra, com três arcos, aproximadamente no meio do percurso. O arco central mantém 22 unidades de largura, com abertura de 408 unidades nas laterais e 438 no centro, antes das margens de segurança do avião. O tabuleiro alcança o teto local e a passagem é validada para impedir desvios laterais. A passagem exige alinhamento lateral das asas, com liberdade vertical dentro do vão alto. Pilares esbeltos sustentam o tabuleiro, sem parede maciça fechando o corredor.
 
@@ -78,9 +82,11 @@ Progressão proposta:
 | Curvas abertas alternadas | Introduzir curvas com roll e pitch |
 | Curvas em S e estreitamentos | Exigir antecipação e uso dos airbrakes |
 | Sequência final | Combinar precisão e velocidade |
-| Chegada visível | Encerrar a run sem ambiguidade |
+| Marco final e bacia de manobra | Iniciar a volta, sem teleporte |
+| Retorno pelo cânion | Evitar exposição ao radar, evadir SAMs e administrar dez flares |
+| Base inicial | Encerrar a run válida e registrar tempo |
 
-Sem inimigos, armas, multiplayer, decolagem ou pouso. Usar variação de rochas, iluminação e marcas visuais para orientar o jogador. Avisar sobre proximidade do teto usando texto/ícone além de cor.
+Baterias SAM são a ameaça inimiga; não há armas ofensivas do jogador, multiplayer, decolagem ou pouso. Usar variação de rochas, iluminação e marcas visuais para orientar o jogador. Avisar sobre proximidade do teto usando texto/ícone além de cor.
 
 ## Modelo e animações
 
@@ -114,9 +120,9 @@ As deflexões devem interpolar suavemente e voltar ao neutro. Não animar a dobr
 
 ## Interface e estados
 
-Menu principal: título, CANYON 01, VOO LIVRE, controles e sair. Voo livre inicia imediatamente acima do cânion, mantém colisões e física, mas desativa teto/alarme, percurso obrigatório, cronômetro, chegada e recorde. Reiniciar preserva o modo escolhido. Não mostrar fases fictícias bloqueadas.
+Menu principal como painel de operações: tipografia grande, mapas vetoriais do traçado/relevo, briefing da seleção e checklist de controles. OPERAÇÃO CÂNION, VOO LIVRE e sair. Voo livre inicia imediatamente em Granite Range, mapa separado de 20 × 20 km, com montanhas, florestas, 24 formações rochosas e sete arcos. Mantém colisões e física, mas desativa teto/alarme, SAMs, percurso obrigatório, cronômetro, chegada e recorde. Reiniciar preserva o modo escolhido. Não mostrar fases fictícias bloqueadas.
 
-HUD: instrumentos laterais verde neon de velocidade indicada em km/h, Mach, altitude acima do piso (AGL) e potência. As fitas de velocidade/altitude deslizam continuamente sob índices fixos, com recorte das bordas. A distância restante ao longo do percurso aparece na lateral no modo corrida. Sem mira, mensagens ou cronômetro no centro. Contagem inicial na lateral. Cronômetro permanece ativo e é mostrado no resultado. Alerta de altitude sonoro e indicação lateral intermitente nos últimos 60 metros até o teto.
+HUD: instrumentos laterais verde neon de velocidade indicada em km/h, Mach, altitude acima do piso (AGL) e potência. As fitas de velocidade/altitude deslizam continuamente sob índices fixos, com recorte das bordas. A distância restante de ida + volta aparece na lateral no modo corrida, junto da perna atual, rumo ao próximo setor, tempo e estoque de flares. Alerta visual/sonoro de míssil tem prioridade sobre o aviso de altitude. Sem mira, mensagens ou cronômetro no centro. Contagem inicial na lateral. Cronômetro permanece ativo e é mostrado no resultado. Alerta de altitude sonoro e indicação lateral intermitente nos últimos 60 metros até o teto.
 
 Estados: Menu Principal, Preparação, Correndo, Pausado, Derrota e Vitória.
 
@@ -125,18 +131,21 @@ Estados: Menu Principal, Preparação, Correndo, Pausado, Derrota e Vitória.
 - Vitória mostra tempo final, recorde e opção de tentar novamente.
 - Perda de foco durante a run pausa o jogo para evitar colisões enquanto a janela está inativa.
 - Reinício e troca de menu restauram a escala de tempo corretamente.
-- Impedir que colisão, teto e chegada encerrem a mesma run mais de uma vez; derrota tem prioridade se houver conflito na mesma etapa de física.
+- Impedir que colisão, míssil e chegada encerrem a mesma run mais de uma vez; derrota tem prioridade se houver conflito na mesma etapa de física.
 
 ## Organização prevista
 
 | Componente | Responsabilidade |
 | --- | --- |
-| FlightInput | Ler teclado pelo Input System |
+| FlightInput | Ler teclado e gamepad pelo Input System |
 | FlightController | Empuxo, arrasto, sustentação e rotação |
 | AircraftVisuals | Superfícies móveis e efeitos do motor |
 | ChaseCamera | Acompanhamento e prevenção de obstruções |
 | CanyonCourse | Geometria, setores e limites da fase |
-| RunManager | Estados, cronômetro, chegada, derrota e reinício |
+| RunManager / MissionProgress | Estados, cronômetro, ida/retorno, vitória na base e reinício |
+| AirDefense / MissionRules | Aquisição, disparos, perseguição e dez contramedidas |
+| FreeFlightWorld | Mapa independente de treino |
+| MissionMapGraphic | Traçado/relevo vetorial do briefing |
 | GameUI | Menus, HUD e mensagens |
 | RecordStore | Persistência local do melhor tempo por fase |
 
@@ -159,11 +168,11 @@ Situação da implementação: os sistemas abaixo estão escritos, com compilaç
 - Todos os comandos funcionam conforme a tabela, inclusive teclas pressionadas simultaneamente.
 - A câmera mantém boa visibilidade em curvas e perto de paredes.
 - Paredes e piso não podem ser atravessados na maior velocidade atingível.
-- O teto encerra a run no limite visual esperado.
+- O teto só habilita SAMs na volta; descida impede novos disparos, sem apagar mísseis já lançados. Flares e terreno permitem evasão.
 - A chegada só aceita percurso válido e grava recorde apenas se o tempo melhorar.
 - Pausar não acumula tempo; reiniciar zera tudo; voltar ao menu permite jogar novamente.
 - As superfícies móveis seguem os comandos, sem dobrar as asas.
-- Uma run representativa dura aproximadamente 2–3 minutos.
+- Ida e volta completas são cronometradas; duração e dificuldade calibradas por playtest.
 - Jogo utilizável do menu à vitória/derrota e de volta, sem erros no Console.
 - Build Windows testada; desempenho medido no hardware de teste, buscando 60 FPS com qualidade adequada.
 
@@ -171,13 +180,13 @@ Situação da implementação: os sistemas abaixo estão escritos, com compilaç
 
 A cena inicial monta o jogo ao dar Play, sem importador externo. O menu `SkyRacers > 1 - Build Game Scene` permite gerar a versão editável com meshes e prefab persistentes. O comando de build Windows está no mesmo menu.
 
-O percurso atual tem aproximadamente 46,3 km e 1.001 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. A corrida inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. O voo livre inicia 595 unidades acima do piso no mesmo ponto de partida. A duração com a nova física deve ser medida em voo.
+O percurso atual tem aproximadamente 46,3 km e 1.001 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. A corrida inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. O voo livre inicia a 420 unidades acima do piso em (0, −7500) no mapa separado de treino. A duração com a nova física deve ser medida em voo.
 
 Propulsão: aceleração-base 18 m/s² e pós-combustão adicional 10 m/s² a 100% de potência. O Mach usa referência fixa de 340 m/s. Massa de 12.000 kg, área de referência de 37,2 m² e densidade decrescente com altitude. Sustentação por ângulo de ataque e pressão dinâmica; arrasto de perfil, induzido, transônico, de derrapagem e dos airbrakes. W/S comandam taxa de pitch de até 75°/s, com proteção preditiva de ângulo de ataque e carga G. Ao soltar, o trim estabiliza o voo. Aceleração angular limitada a 480°/s² no pitch; roll até 150°/s. Pose usada na física vem de Rigidbody.rotation, sem atraso da interpolação visual. A gravidade e a orientação da sustentação produzem as curvas, sem realinhamento artificial da velocidade. Parâmetros ajustados para jogabilidade, não dados certificados do F/A-18.
 
 O ensaio longitudinal de 20 s mantém voo neutro com desvio vertical de aproximadamente −5,7 m. O ensaio de 2 s puxando o nariz a plena potência altera a atitude em cerca de 75°. Com pós-combustão, o ensaio de 20 s chega a Mach 1,29. Esses testes exercitam as equações reais, mas não substituem a execução do Rigidbody, das colisões e dos controles no Unity.
 
-As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. A câmera foi preservada; taxas e controle angular foram revisados para a nova física.
+As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. A física aprovada foi preservada nesta revisão; a câmera recebeu órbita manual e recentralização após dez segundos.
 
 Sombras: perfil PC com distância 600, resolução 4096 e quatro cascatas; Mobile com distância 300, resolução 2048 e duas cascatas. O limite anterior era 50. A nova fase usa uma chave própria de recorde, preservando os dados antigos sem compará-los ao novo percurso.
 
@@ -202,3 +211,34 @@ Os quatro eixos da avaliação são controles/câmera, desempenho/colisões, mod
 - Nova física assistida e modo livre para testes. Novo identificador de recorde para não misturar tempos da física anterior.
 
 Compilação C# e referências verificadas. Efeitos, som, desempenho e passagem pela ponte ainda precisam de playtest no Unity nesta revisão.
+
+
+## Defesa antiaérea e referência cinematográfica — 24/11/2026
+
+Referência pesquisada: [roteiro de Top Gun: Maverick](https://assets.scriptslug.com/live/pdf/scripts/top-gun-maverick-2022.pdf), pp. 72, 95 e 137. Princípios adotados: o relevo mascara o caça; subir o expõe aos SAMs; escapar exige manobra, retorno ao cânion e contramedidas limitadas. O filme não fixa cadência ou envelope de guiagem. Os valores abaixo são parâmetros de jogo; flare representa a salva combinada de contramedidas, sem pretensão de reproduzir sensores reais.
+
+- Na volta, acima de 450 m sobre o piso local, bateria com visão direta a até 6,5 km adquire o caça após 1,5 s contínuo. Lançamentos separados por pelo menos 4 s, até quatro mísseis ativos.
+- Míssil acelera de 300 a 950 m/s; giro limitado a 10,5 G e 75°/s, aproximadamente o envelope de manobra do caça. Perseguição continua após o jogador descer; bloqueio pelo terreno por mais de 0,8 s elimina rastreamento. Há colisão com o cenário e expiração em 24 s.
+- Dez cargas por voo; cada pressionamento libera 24 flares em 12 pares ao longo de 0,55 s, com intervalo mínimo de 0,6 s entre cargas. Flare recente e visível pode distrair um míssil em seu cone frontal entre 90 e 850 m; um disparo tardio pode falhar.
+- Reiniciar recupera o estoque e remove ameaças; pausa congela toda a simulação. Voo livre permite testar os flares, sem SAMs.
+- Fim da ida alarga em uma bacia de 6,4 km, com cerca de 5 km extras de terreno longitudinal, para o jogador fazer a curva. Não há teleporte.
+
+Testes numéricos: sequência dos setores nas duas direções, rejeição de atalhos, vitória apenas na base, condições de aquisição, atraso/cadência, limite de mísseis e estoque/reset de flares. Compilação de scripts e editor verificada. Testes de voo com gamepad, aparência do menu, perseguição e colisões em Play Mode ainda pendentes; roteiro de teste no README.
+
+
+## Refinamento de contramedidas e cenário — 24/11/2026
+
+Cada carga dispara 24 flares em leque bilateral, com brilho branco/dourado, rastro quente curto e fumaça persistente. As emissões acompanham a posição atual do caça durante a salva; pausa congela a sequência e reinício a elimina. O estoque continua em dez acionamentos.
+
+SAMs partem a 300 m/s, aceleram a 240 m/s² e atingem 950 m/s. O limite de giro por carga G foi mantido: maior velocidade também exige maior raio de curva. No ensaio retilíneo, um míssil 2 km atrás de um alvo a 450 m/s o alcança em menos de sete segundos; curvas, relevo e flares alteram esse resultado em jogo.
+
+Terreno externo ampliado para aproximadamente 48 km de largura, com montanhas e 16 km adicionais em cada extremidade do terreno anterior. As novas malhas compartilham as bordas do cânion para fechar as laterais e cabeceiras, sem alargar o corredor da missão. O mapa continua finito; suas bordas ficam afastadas do percurso e além da distância de renderização durante o voo pela missão.
+
+Conferir em Play: salva vista pela câmera traseira e orbital, estoque por acionamento, pausa/reinício durante a salva, perseguição dos SAMs e ausência de bordas visíveis sobre o vale.
+
+
+## Arcos de missão e radar em ambas as pernas
+
+A missão agora possui dois arcos sinalizadores físicos, além da ponte central: arco de RETORNO no último setor e arco de BASE no primeiro setor. Cruzar o interior do arco final na ida inicia o retorno; cruzar o arco inicial na volta, após os setores obrigatórios, conclui a missão. Passar acima ou ao lado não ativa o marco; é possível reposicionar e tentar a passagem novamente.
+
+Regra atual de radar (substitui a restrição à volta descrita anteriormente): SAMs podem adquirir e lançar tanto na ida quanto na volta, se o caça estiver acima do teto, dentro do alcance e visível à bateria. Voo livre permanece sem SAMs.

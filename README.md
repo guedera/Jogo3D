@@ -1,80 +1,96 @@
 # SkyRacers
 
-Corrida aérea solo em um F-18: atravesse o cânion sem bater nem ultrapassar suas bordas e alcance a chegada no menor tempo possível.
+Corrida aérea solo em um F-18: atravesse o cânion, cruze a ponte, faça a curva no marco final e retorne à base. Na volta, voar acima das bordas expõe o caça aos mísseis terra-ar. Complete ida e volta no menor tempo possível.
 
 ## Jogar no Unity
 
 1. Abra `SkyRacers/` no **Unity 6000.6.6f1** e aguarde a importação/compilação.
 2. Abra **Assets/Scenes/CanyonRun.unity**.
-3. Aperte **Play** e escolha **CANYON 01 / VOAR** ou **VOO LIVRE / TESTAR FÍSICA**.
+3. Aperte **Play** e escolha **OPERAÇÃO CÂNION** ou **VOO LIVRE**.
 
-Voo livre começa acima do cânion, sem contagem inicial, teto de altitude, setores obrigatórios, cronômetro ou chegada. As colisões permanecem ativas. ESC permite continuar, reiniciar no mesmo modo ou voltar ao menu.
+A cena inicial constrói o cenário e o avião ao iniciar; não exige importador glTF nem configuração manual. O menu tem um painel de operações com mapa do percurso, briefing e controles. Mouse, teclado e gamepad navegam nos menus.
 
-A cena constrói o cenário e o avião ao iniciar. É normal ver apenas o objeto de inicialização na Hierarchy antes do Play. Não é necessário instalar um importador glTF nem configurar objetos manualmente.
+**Voo livre — Granite Range:** mapa independente de 20 × 20 km, com montanhas, florestas, 24 formações rochosas e sete arcos de treino. Começa imediatamente, a 420 m sobre o terreno, sem teto, mísseis, cronômetro ou percurso obrigatório. Colisões permanecem ativas. O terreno tem extensão finita, mas sair dele não encerra o voo.
 
 ## Controles
 
-| Tecla | Ação |
-| --- | --- |
-| Shift / Ctrl, segurados | Aumentar / diminuir potência |
-| X, segurado | Airbrakes |
-| A / D | Roll para esquerda / direita |
-| S / W | Levantar / abaixar o nariz |
-| Q / E | Yaw para esquerda / direita |
-| Esc | Pausar / continuar |
+| Ação | Teclado | PlayStation / Xbox |
+| --- | --- | --- |
+| Aumentar / diminuir potência | Shift / Ctrl, segurados | R2 / L2 · RT / LT |
+| Airbrakes | X, segurado | X / A, segurado |
+| Roll | A / D | Analógico esquerdo, horizontal |
+| Pitch | S sobe / W desce | Analógico esquerdo: puxar sobe, empurrar desce |
+| Yaw / leme | Q / E | L1 / R1 · LB / RB |
+| Olhar ao redor | Setas | Analógico direito |
+| Soltar um flare | F | Círculo / B |
+| Pausar / continuar | Esc | Options / Start |
+| Navegar no menu | Setas ou mouse | D-pad ou analógico esquerdo |
+| Confirmar no menu | Enter ou clique | X / A |
 
-A potência permanece no valor escolhido ao soltar Shift/Ctrl. Incline o avião com A/D e puxe com S para fechar a curva; Q/E ajudam a ajustar a direção. Use os airbrakes antes de curvas fechadas. Baixa velocidade reduz sustentação.
+A potência permanece no valor escolhido ao soltar os gatilhos/teclas. A câmera volta suavemente ao centro após **10 segundos** sem comando de câmera; pausa não conta nesse intervalo. Cada acionamento emite uma salva de **24 flares** e consome uma das **10 cargas**, com intervalo mínimo de 0,6 s. A salva libera 12 pares em leque ao longo de 0,55 s, com núcleos luminosos e fumaça. Segurar o botão não consome novas cargas.
 
-## Implementado
+## Missão de ida e volta
 
-- Câmera traseira suavizada com detecção de paredes.
-- Sustentação por velocidade/densidade/ângulo de ataque, arrasto induzido, estol progressivo e controle de taxa angular com proteção de ângulo de ataque/carga G. Roll de até 150°/s, com resposta mais rápida e limites de carga de −5 a +10,5 G (ajustados para o jogo).
-- F-18 texturizado com estabilizadores, ailerons, flaps e lemes animados, asas estendidas e trem recolhido.
-- Pós-combustão a 100% de potência e chamas azuis ancoradas nos bocais. O ensaio longitudinal isolado chega a Mach 1,29 após 20 s de potência máxima, partindo de 170 m/s a 600 m; não é uma medição em Play Mode.
-- Cânion alpino fixo, 60% mais estreito que a versão alpina anterior, com pinheiros, riacho, neve nas encostas, montanhas e variações de elevação.
-- Uma única ponte de três arcos no meio da fase; passagem obrigatória sob o arco central.
-- Teto de voo a 450 unidades acima do relevo local, duas cachoeiras e chegada sem postes.
-- HUD lateral com fitas móveis de velocidade indicada (km/h) e altitude AGL (m), potência, Mach e distância restante ao longo do percurso. Marcações deslizam sob índices fixos; centro livre. Cronômetro e recorde aparecem no resultado.
-- Preparação, pausa, derrota, vitória, reinício e menu principal.
-- Recorde local salvo somente após completar todos os setores.
-- Áudio de motor gerado por código e efeitos visuais de escapamento.
+- Preparação de três segundos; cronômetro único para as duas pernas, aproximadamente 92,6 km ao todo.
+- Setores obrigatórios na ordem de ida e na ordem inversa na volta. É necessário passar sob o arco central da única ponte nos dois sentidos.
+- Chegar ao marco final muda o objetivo para **RETORNO À BASE**. O piloto faz a curva; não há teleporte. O fim do cânion tem uma bacia larga com terreno adicional para a manobra.
+- Ultrapassar 450 m acima do piso local **não causa derrota automática**. Na ida há aviso de altitude. Na volta, o caça fica exposto ao radar.
+- Bater ou contornar a passagem central da ponte encerra a run. Vitória e recorde só ocorrem ao completar o retorno ao início.
+- Pausa congela física, mísseis, contramedidas e cronômetro. Reiniciar restaura avião, câmera, dez flares e missão; elimina projéteis e destroços. Perder o foco da janela pausa o voo.
 
-No modo corrida, colidir, ultrapassar o teto, contornar a passagem central da ponte ou sair pelos limites longitudinais encerra a run. Pausar congela cronômetro e física; perder o foco da janela também pausa. Reiniciar restaura a run desde o começo. A nova fase tem uma chave própria de recorde para não comparar tempos com a versão antiga.
+### Mísseis e contramedidas
+
+Baterias no alto do cânion só lançam na volta, acima do teto, com visão direta e a até 6,5 km. A primeira aquisição exige 1,5 s contínuo de exposição. Novos disparos têm intervalo mínimo de 4 s; há no máximo quatro mísseis ativos. Descer ou perder a linha de visão interrompe novas aquisições.
+
+Mísseis já lançados continuam em voo: não desaparecem ao descer. Seu giro é limitado ao envelope positivo de 10,5 G usado pelo caça, com teto de 75°/s; aceleram de 300 até 950 m/s. Bloqueio de visão pelo relevo por mais de 0,8 s elimina o rastreamento. Colidem com o terreno e expiram após 24 s.
+
+Flares recentes, visíveis e à frente do míssil podem desviá-lo entre 90 e 850 m de distância. Disparar tarde demais pode falhar. HUD lateral mostra estoque, aquisição e mísseis em voo; o alerta sonoro muda quando há ameaça.
+
+Inspiração pesquisada: [roteiro de Top Gun: Maverick](https://assets.scriptslug.com/live/pdf/scripts/top-gun-maverick-2022.pdf), pp. 72, 95 e 137: proteção pelo cânion, exposição durante a subida e evasão com contramedidas limitadas. Esses princípios orientam o jogo. Cadência, velocidades e janelas de reação são ajustes próprios, pois o filme não define esses parâmetros. “Flare” representa a salva cinematográfica de contramedidas (flare/chaff), não uma simulação de um sensor real de míssil.
+
+## Voo, cenário e efeitos
+
+- Física com sustentação por velocidade, densidade e ângulo de ataque; arrasto induzido, estol progressivo, trim e proteção de carga G. Mantida a pilotagem aprovada: pitch até 75°/s, roll 150°/s, envelope −5/+10,5 G e transição angular de 35 ms.
+- F-18 texturizado com oito superfícies animadas: estabilizadores, ailerons, flaps e lemes. Asas permanecem estendidas e trem recolhido.
+- Pós-combustão a 100% com chama azul nos bocais; fumaça e trilhas de ponta de asa; boom sônico apenas ao cruzar Mach 1 acelerando.
+- Cânion alpino de 450 m de profundidade, pinheiros, neve, relevo variável e duas cachoeiras. **Riacho removido.** Ponte central com vão de 22 m de largura e até 438 m de altura.
+- HUD lateral verde, fitas móveis de velocidade/altitude, potência, Mach, distância total restante, perna da missão, rumo ao percurso, tempo e flares. Centro livre.
+- Colisões desmembram as 74 meshes do avião, com explosão, fumaça e som; resultado aparece após 2,5 s.
+- Sombras: perfil PC com distância 600, atlas 4096 e quatro cascatas; Mobile com 300, atlas 2048 e duas cascatas.
 
 ## Editar e gerar build
 
-O menu **SkyRacers** aparece após a compilação:
-
-| Comando | Uso |
+| Menu SkyRacers | Uso |
 | --- | --- |
-| 1 - Build Game Scene | Gera prefab e meshes persistentes e substitui CanyonRun pela versão editável |
+| 1 - Build Game Scene | Gera prefab e meshes persistentes e substitui CanyonRun por uma versão editável |
 | 2 - Open Game Scene | Abre a cena do jogo |
 | 3 - Build Windows | Gera `SkyRacers/Builds/Windows/SkyRacers.exe` |
-| 4 - Validate Course | Verifica piso e setores na cena editável gerada pelo comando 1 |
+| 4 - Validate Course | Verifica piso, setores nos dois sentidos, travessia acima do teto e ponte; usar na cena gerada ou durante Play com o cânion ativo |
 
-O comando 1 reconstrói a cena: salve em outra cena qualquer edição manual que queira preservar. É opcional; a cena inicial já pode ser executada e compilada diretamente.
+O comando 1 reconstrói a cena: salve em outra cena qualquer edição manual que queira preservar. É opcional; a cena inicial já executa e compila diretamente. O mapa de treino é construído separadamente ao entrar no voo livre.
 
-Parâmetros de voo: `FlightController`. Traçado e dimensões: `CanyonCourse`. Superfícies móveis: `AircraftFactory`. Planejamento: [GDD.md](GDD.md).
+Parâmetros: `FlightDynamics`, `CanyonCourse`, `FreeFlightWorld`, `MissionRules` e `AirDefense`. Planejamento: [GDD.md](GDD.md).
 
-## Verificação
+## Verificação — 24/11/2026
 
-Concluído: compilação C# dos scripts de jogo e editor contra as assemblies instaladas do Unity 6000.6.6f1; referências da cena/materiais; índices, UVs e pose das asas do modelo; inspeção geométrica das peças.
+`python3 Tools/verify_project.py` compila scripts de jogo/editor contra as assemblies instaladas do Unity, valida referências/modelo e executa ensaios numéricos das equações reais. Requer uma primeira importação do projeto no Unity macOS.
 
-Não foi possível executar Play Mode nem gerar a build neste ambiente: a execução adicional do Unity foi impedida por restrições aos serviços locais do editor. Visual, shaders, física em execução, FPS e build Windows precisam de validação no editor.
+Passaram: compilação C#, dados do avião, referências, dinâmica de voo, superfícies, HUD, sequência ida/volta, vitória apenas na base, condições de aquisição, cadência de lançamento e limite/reset dos dez flares. O ensaio longitudinal isolado continua chegando a Mach 1,29 em 20 s de potência máxima, partindo de 170 m/s a 600 m.
 
-A versão inicial foi testada pelo usuário. A revisão atual altera a física e mantém a câmera. O percurso tem aproximadamente 46,3 km; a duração precisa ser medida com o novo modelo de voo. Os coeficientes são ajustados para o jogo e não constituem uma simulação certificada do F/A-18.
+**Ainda precisam de Play Mode:** aparência do menu/efeitos, gamepad físico, câmera orbital, colisões/homing no cenário, desempenho e build Windows. A execução adicional do Unity neste ambiente é bloqueada pelos serviços locais do editor; compilação e ensaios numéricos não substituem esses testes.
 
-As sombras do perfil PC passaram de 50 para 600 unidades de distância, com atlas de 4096 e quatro cascatas. O perfil Mobile usa 300 unidades e atlas de 2048. A melhoria visual e o custo de desempenho precisam ser avaliados em Play Mode.
+Roteiro de playtest:
 
-Playtest inicial:
+1. Navegar pelo menu com mouse, teclado e controle. Conferir o mapa/briefing de cada modo.
+2. Entrar em voo livre: verificar terreno independente, arcos, colisões e ausência de teto/SAM. Reiniciar deve manter esse modo.
+3. Conferir todos os eixos/gatilhos, airbrakes e flares. Girar a câmera, esperar 9 s (mantém posição), depois mais 1 s (começa a voltar); pausa deve congelar a espera.
+4. Soltar dez flares: estoque termina em zero e o 11º comando não emite. Reiniciar restaura dez. Segurar o botão emite apenas uma salva de 24 flares.
+5. Na missão, subir acima do teto na ida: aviso, sem derrota nem lançamento. Completar a ida: objetivo muda, sem vitória; virar e retornar pelo percurso.
+6. Na volta, expor-se acima do teto por mais de 1,5 s: conferir radar e disparos periódicos. Descer interrompe novos disparos, mas mantém os já lançados. Testar evasão usando relevo e flares.
+7. Cruzar a ponte pelo arco central nos dois sentidos. Retornar à base para vencer. Distância deve cair ao longo das duas pernas; somente missão completa grava recorde.
+8. Pausar durante perseguição; continuar sem saltos. Reiniciar/voltar ao menu deve limpar mísseis, flares e destroços. Repetir a troca entre modos e conferir Console/FPS.
 
-1. Iniciar e conferir câmera, todos os controles e movimentos das superfícies.
-2. Pausar, continuar e reiniciar; conferir cronômetro e potência restaurados.
-3. Bater no piso e nas paredes, ultrapassar o teto e reiniciar após cada derrota.
-4. Completar a fase e conferir o recorde após sair e abrir novamente.
-5. Testar a build Windows e ajustar sensibilidade/velocidade conforme a pilotagem.
-
-`Tools/verify_project.py` repete a compilação, valida referências e executa `Tools/FlightChecks.cs` contra as equações reais de voo e do HUD: trim, sentido dos comandos, limites G, estol, frenagem, pós-combustão e continuidade das escalas. Requer a primeira importação do Unity no macOS. `Tools/convert_aircraft.py` regenera os dados do modelo. `Tools/create_bootstrap_scene.py` regenera e sobrescreve a cena inicial e seus materiais.
+`Tools/convert_aircraft.py` regenera dados do modelo. `Tools/create_bootstrap_scene.py` sobrescreve a cena inicial e materiais; não é necessário para esta atualização.
 
 ## Assets e créditos
 
@@ -83,59 +99,47 @@ Playtest inicial:
 | Modelo e texturas do F-18 | `low-poly-f18-super-hornet.zip`, fornecido pelo usuário; glTF exportado pelo Blockbench |
 | Cenário, interface, código e áudio procedural | Criados para SkyRacers |
 
-O ZIP não inclui autor, URL de origem ou licença. Registrar esses dados antes da publicação. O modelo original está preservado em `Assets/ThirdParty/F18/model.gltf`; o jogo usa dados convertidos com a hierarquia das peças preservada.
+O ZIP não inclui autor, URL ou licença; completar os créditos antes da publicação. Original preservado em `Assets/ThirdParty/F18/model.gltf`, com hierarquia preservada na conversão.
 
-Referências técnicas: [especificação glTF](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) e [Rigidbody do Unity](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rigidbody).
+Referências técnicas: [glTF](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html), [NASA — Lift to Drag Ratio](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/lift-to-drag-ratio/), [NASA — Modern Drag Equation](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/modern-drag-equation/), [NASA — F-18 HARV](https://www.nasa.gov/reference/f-18-harv/), [VAZGRIZ](https://vazgriz.com/346/flight-simulator-in-unity3d-part-1/), [Aircraft Physics](https://github.com/gasgiant/Aircraft-Physics) e [Unity — AddTorque](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rigidbody/addtorque). Implementação própria; nenhum pacote externo de física foi importado.
 
 ## Versionamento
 
-Versionar `Assets/` com os arquivos `.meta`, `Packages/` e `ProjectSettings/`. O `.gitignore` exclui caches, configurações locais, arquivos gerados pelas IDEs e builds.
+Versionar `Assets/` com `.meta`, `Packages/` e `ProjectSettings/`. O `.gitignore` exclui caches, configurações locais, arquivos das IDEs e builds. Recordes da missão de retorno usam chave própria, separada dos percursos anteriores.
 
 
-## Revisão de efeitos e cenário — 18/11/2026
+## Refinamento de contramedidas e cenário — 24/11/2026
 
-- Profundidade triplicada para 450 m, largura reduzida para aproximadamente 59–101 m no fundo. Postes removidos; chegada marcada no piso.
-- Duas cachoeiras com névoa, relevo com mais segmentos, normais suavizadas e detalhe procedural na superfície para reduzir o aspecto facetado.
-- Arco central de 22 m de largura e 438 m de altura máxima, com laterais abertas até 408 m e tabuleiro a 458 m. Exige alinhamento lateral; já não exige rasante de 9 m. Os pilares continuam colidindo.
-- HUD lateral verde neon de altitude, velocidade e potência; centro da tela livre. Alarme pulsado de altitude que cessa em pausa, derrota ou retorno à altitude segura.
-- Fumaça dos motores e trilhas nas pontas das asas com baixa opacidade.
-- Impacto separa as 74 meshes em destroços com colisores, gera fogo, fumaça, fragmentos e som; aguarda 2,5 s antes do resultado. Reiniciar restaura o avião e remove destroços.
-- Boom sônico e anel discreto de condensação somente na passagem de Mach < 1 para Mach >= 1 durante a run. Não dispara ao desacelerar, permanecer supersônico ou retomar de uma pausa.
-- Física revisada com controle assistido de ângulo de ataque, sustentação perpendicular ao fluxo e perda de energia nas curvas. Novo identificador de recorde para separar tempos da física anterior.
+Cada carga dispara 24 flares em leque bilateral, com brilho branco/dourado, rastro quente curto e fumaça persistente. As emissões acompanham a posição atual do caça durante a salva; pausa congela a sequência e reinício a elimina. O estoque continua em dez acionamentos.
 
-Compilação C# e referências verificadas. Efeitos, som, desempenho e passagem pela ponte ainda precisam de playtest no Unity nesta revisão.
+SAMs partem a 300 m/s, aceleram a 240 m/s² e atingem 950 m/s. O limite de giro por carga G foi mantido: maior velocidade também exige maior raio de curva. No ensaio retilíneo, um míssil 2 km atrás de um alvo a 450 m/s o alcança em menos de sete segundos; curvas, relevo e flares alteram esse resultado em jogo.
+
+Terreno externo ampliado para aproximadamente 48 km de largura, com montanhas e 16 km adicionais em cada extremidade do terreno anterior. As novas malhas compartilham as bordas do cânion para fechar as laterais e cabeceiras, sem alargar o corredor da missão. O mapa continua finito; suas bordas ficam afastadas do percurso e além da distância de renderização durante o voo pela missão.
+
+Conferir em Play: salva vista pela câmera traseira e orbital, estoque por acionamento, pausa/reinício durante a salva, perseguição dos SAMs e ausência de bordas visíveis sobre o vale.
 
 
-## Playtest desta revisão
+## Passagem pela ponte e acabamento da câmera
 
-1. No menu, entrar em VOO LIVRE. Subir acima de 450 m, sair lateralmente do cânion e passar pela ponte sem encerrar o voo nem tocar o alarme de teto.
-2. Comparar A/D, S/W e Q/E; inclinar e puxar S para fazer curvas. Soltar o pitch e conferir a estabilização; reduzir potência e testar X.
-3. Conferir as fitas do HUD deslizando continuamente tanto ao acelerar/subir quanto ao desacelerar/descer, inclusive nas mudanças de graduação.
-4. Pausar e reiniciar: manter voo livre, restaurar posição/potência e limpar efeitos. Colidir e tentar novamente deve manter o modo livre.
-5. Voltar ao menu e iniciar CANYON 01: confirmar contagem, distância restante diminuindo, alarme e derrota no teto; passar pelo vão central da ponte a 65, 200 e 350 m acima do piso.
-6. Finalizar a corrida e conferir o recorde; voo livre nunca grava tempos.
+Corrigida a validação da ponte: usa a abertura real, sem o recuo fixo de 8 m por lado que causava derrotas em passagens deslocadas do centro. As colisões das asas/fuselagem continuam sendo tratadas pelos colisores do avião e da ponte; desvios fora do arco continuam inválidos. Testes cobrem passagem lateral a ±3,5 m, parte alta do arco e rejeição fora do vão.
 
-Base das equações de sustentação e arrasto: [NASA — Lift to Drag Ratio](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/lift-to-drag-ratio/) e [NASA — Modern Drag Equation](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/modern-drag-equation/).
+Câmera com pós-processamento URP ativado, vinheta de intensidade 0,14/suavidade 0,55 e aberração cromática 0,04. Perfil em execução sobrescreve apenas esses parâmetros, mantendo os assets de volume da cena. HUD permanece em overlay. Conferir visual e passagem em ambos os sentidos no Play Mode.
 
 
-## Refinamento de pitch e superfícies
+## Arcos de missão e radar em ambas as pernas
 
-- W/S comandam a rotação com resposta inicial mais firme, limitada progressivamente por ângulo de ataque e carga G. O envelope −5/+10,5 G prioriza pilotagem de jogo; não representa os limites certificados do F/A-18.
-- Física lê a pose do Rigidbody e aplica correções por torque com aceleração angular limitada, evitando depender da interpolação da câmera/modelo.
-- Oito superfícies animadas: estabilizadores, ailerons externos, flaps internos e lemes. Flaps automáticos por velocidade/AoA, lemes com eixo inclinado e asas sem dobra durante o voo.
-- Ensaios longitudinais de 2 s com potência máxima: a 612 km/h, S altera a atitude em 75,1° e W em −43,8°; a 1.224 km/h, 33,6° e −22,8°. São ensaios numéricos, não medições de Play Mode.
-- Testes incluem resposta em três velocidades, comando curto, passagem pela vertical, recuperação ao soltar, passos de física de 20/50 ms e sentido/limites das superfícies.
+A missão agora possui dois arcos sinalizadores físicos, além da ponte central: arco de RETORNO no último setor e arco de BASE no primeiro setor. Cruzar o interior do arco final na ida inicia o retorno; cruzar o arco inicial na volta, após os setores obrigatórios, conclui a missão. Passar acima ou ao lado não ativa o marco; é possível reposicionar e tentar a passagem novamente.
 
-Referências consultadas: [VAZGRIZ — Flight Simulator in Unity3D](https://vazgriz.com/346/flight-simulator-in-unity3d-part-1/), [Aircraft Physics](https://github.com/gasgiant/Aircraft-Physics), [NASA — F-18 HARV](https://www.nasa.gov/reference/f-18-harv/) e [Unity — AddTorque](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/rigidbody/addtorque). Implementação própria; nenhum pacote externo foi importado.
-
-No próximo Play, testar W/S com toques curtos e depois segurando, em cruzeiro e acima de Mach 1. Verificar A/D nos ailerons e estabilizadores, Q/E nos lemes e X nos flaps; a animação deve voltar ao neutro/posição automática após soltar.
+Regra atual de radar (substitui a restrição à volta descrita anteriormente): SAMs podem adquirir e lançar tanto na ida quanto na volta, se o caça estiver acima do teto, dentro do alcance e visível à bateria. Voo livre permanece sem SAMs.
 
 
-## Ajuste de efeitos e inércia — 19/11/2026
+## Leitura e agilidade dos SAMs
 
-- Fumaça com emissão por distância (0,85 partícula/m + 18/s), opacidade 0,16, diâmetro inicial de até 1,3 m e duração de 0,65 s. Emissores ficam atrás dos bocais e apontam para trás. O teto de 512 partículas por motor acomoda o voo supersônico.
-- Rastro nas extremidades traseiras das asas com largura de 0,14 m, opacidade inicial 0,24 e duração de 0,5 s. Máscara de faixa com bordas suaves substitui a máscara circular, preservando o trecho que nasce junto à asa. O material de partículas continua circular para fumaça, cachoeiras e explosões.
-- Transição angular de 35 ms na entrada/saída dos comandos, mantendo taxas máximas, limites G e forças. Ensaios em três velocidades mantêm o pitch dentro de 5% da versão sem suavização; saída e inversão dos comandos continuam rápidas.
-- Pausa preserva os rastros existentes; reiniciar limpa os efeitos e reinicia os emissores, evitando emissão por distância durante o teleporte.
+HUD lateral lista cada míssil ativo com distância ao caça em metros e direção relativa (frente, atrás, esquerda ou direita). O alerta principal destaca a distância do mais próximo, mantendo o centro livre. Rastro de fumaça mais espesso e duradouro, com pluma maior e mais visível.
 
-Compilação C#, referências e testes numéricos passaram. Conferir em Play Mode a visibilidade sobre rocha/neve/céu e a sensação da pequena inércia, especialmente ao soltar A/D e W/S. Não houve validação gráfica nesta revisão.
+Guiagem atual: até 32 G e 100°/s, substituindo o envelope anterior de 10,5 G/75°/s. A 950 m/s o giro passa de cerca de 6,2°/s para 18,9°/s. Velocidade, condições de disparo e flares permanecem iguais. Compilação e ensaios numéricos verificados; conferir legibilidade, efeitos e dificuldade no Play Mode.
+
+
+## Ajuste de nuvens e lente
+
+Vinheta elevada para 0,23 e aberração cromática para 0,12. Nuvens maiores e mais opacas, com distribuição próxima ao percurso e banco garantido à frente dos dois pontos de partida. O sistema avança uma etapa antes de pausar as partículas e define bounds explícitos para renderização estática e troca de modos. Conferir no Play Mode a aparência no céu e nas bordas da imagem.

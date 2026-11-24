@@ -115,9 +115,7 @@ namespace SkyRacers
                 FlightDynamics.StepAngularRate(currentAngular.y, localAngular.y, angularAcceleration.y * Mathf.Deg2Rad, dt),
                 FlightDynamics.StepAngularRate(currentAngular.z, localAngular.z, angularAcceleration.z * Mathf.Deg2Rad, dt));
             Body.AddTorque(rotation * (nextAngular - currentAngular), ForceMode.VelocityChange);
-            if (!Run.IsFreeFlight && HighestPoint >= Run.Course.CeilingAt(transform.position))
-                Run.Fail("Você ultrapassou o topo do cânion.");
-            else if (!Run.IsFreeFlight && transform.position.y < Run.Course.FloorAt(transform.position.z) - 20)
+            if (!Run.IsFreeFlight && transform.position.y < Run.Course.FloorAt(transform.position.z) - 20)
                 Run.Crash();
         }
 

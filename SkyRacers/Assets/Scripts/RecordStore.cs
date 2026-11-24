@@ -4,7 +4,7 @@ namespace SkyRacers
 {
     public static class RecordStore
     {
-        const string Key = "SkyRacers.DeepCanyon.v4.BestSeconds";
+        const string Key = "SkyRacers.ReturnMission.v5.BestSeconds";
         public static float Best => PlayerPrefs.GetFloat(Key, 0);
         public static bool Submit(float seconds)
         {

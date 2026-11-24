@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.InputSystem;
 
 namespace SkyRacers
 {
     public sealed class GameUI : MonoBehaviour
     {
-        static readonly Color Ink = new Color(.035f, .065f, .085f, .94f);
         static readonly Color Accent = new Color(.22f, 1f, .32f);
         static readonly Color Muted = new Color(.67f, .74f, .74f);
         RunManager run;
@@ -15,6 +15,12 @@ namespace SkyRacers
         RectTransform root, overlay, card, hud;
         Text heading, subtitle, speed, power, altitude, warning, countdown, mach, distance;
         Image powerBar;
+        static readonly Color MenuAccent=new Color(.97f,.72f,.35f);
+        Text mapTitle,mapDetail,controlsText,flares,clock,objective,navigationHint,bearing,threats;
+        MissionMapGraphic map;
+        RectTransform briefing;
+        bool lastPad;
+
         Text[] speedTicks = new Text[HudTape.Rows], altitudeTicks = new Text[HudTape.Rows];
         Button primary, secondary, tertiary;
         Text primaryText, secondaryText, tertiaryText;
@@ -27,7 +33,11 @@ namespace SkyRacers
             scaler.referenceResolution = new Vector2(1600, 900);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             gameObject.AddComponent<GraphicRaycaster>(); root = GetComponent<RectTransform>();
-            if (EventSystem.current == null) new GameObject("Event System", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            if (EventSystem.current == null)
+            {
+                var events=new GameObject("Event System",typeof(EventSystem));
+                events.AddComponent<InputSystemUIInputModule>().AssignDefaultActions();
+            }
 
             hud = Panel(root, "Flight HUD", 0, 0, 1600, 900, Color.clear);
             // Flight instruments only, transparent neon-green strokes; centre stays empty.
@@ -38,23 +48,40 @@ namespace SkyRacers
             Panel(hud, "Engine scale", 80, 752, 180, 1, Accent);
             powerBar = Panel(hud, "Engine thrust", 80, 747, 100, 5, Accent).GetComponent<Image>();
             warning = Label(hud, "Altitude caution", "", 1280, 660, 285, 60, 19, Accent);
+            threats=Label(hud,"Missile ranges","",1280,55,310,140,18,new Color(1,.45f,.2f));
             distance = Label(hud, "Distance remaining", "", 1280, 745, 300, 35, 22, Accent);
-            countdown = Label(hud, "Preparation", "", 80, 170, 250, 35, 21, Accent);
+            countdown = Label(hud, "Preparation", "", 80, 75, 440, 30, 21, Accent);
+            objective=Label(hud,"Mission leg","",80,115,420,30,19,Accent);
+            bearing=Label(hud,"Next sector bearing","",80,151,420,30,18,Accent);
+            flares=Label(hud,"Countermeasures","",80,790,300,30,21,Accent);
+            clock=Label(hud,"Mission clock","",80,830,300,30,18,Accent);
 
-            overlay = Panel(root, "Menus", 0, 0, 1600, 900, new Color(.02f, .035f, .05f, .2f));
-            card = Panel(overlay, "Menu card", 64, 72, 560, 756, Ink);
-            Panel(card, "Accent", 32, 32, 60, 4, Accent);
-            Label(card, "Eyebrow", "LOW ALTITUDE / TIME ATTACK", 32, 54, 490, 26, 16, Accent);
-            heading = Label(card, "Title", "SKY\nRACERS", 28, 100, 500, 165, 70, Color.white);
-            heading.fontStyle = FontStyle.Bold;
-            subtitle = Label(card, "Description", "", 32, 287, 492, 105, 21, Muted);
-            primary = Button(card, "Primary", 32, 438, out primaryText);
-            secondary = Button(card, "Secondary", 32, 518, out secondaryText);
-            tertiary = Button(card, "Tertiary", 32, 598, out tertiaryText);
-            Label(card, "Footer", "01 FASE   /   TIME ATTACK + VOO LIVRE", 32, 704, 490, 24, 14, Muted);
-            var controls = Panel(overlay, "Controls", 1050, 512, 486, 316, Ink);
-            Label(controls, "Title", "MANUAL DE VOO", 26, 22, 430, 28, 19, Accent);
-            Label(controls, "Keys", "SHIFT / CTRL     Potência dos motores\nA / D                   Roll\nS / W                  Subir / descer o nariz\nQ / E                   Yaw\nX                         Airbrakes (segurar)\nESC                    Pausar", 26, 69, 440, 208, 19, Color.white);
+            overlay=Panel(root,"Operations screen",0,0,1600,900,new Color(.025f,.045f,.052f,.96f));
+            Panel(overlay,"Top rule",64,68,1472,1,new Color(.26f,.38f,.39f));
+            Panel(overlay,"Bottom rule",64,834,1472,1,new Color(.26f,.38f,.39f));
+            Label(overlay,"Unit","SR / 01     NAVAL FLIGHT OPERATIONS",64,30,800,26,17,MenuAccent);
+            Label(overlay,"Status","OFFLINE     /     SINGLE PILOT",1180,30,360,26,15,Muted);
+            Label(overlay,"Version","SKYRACERS  /  FLIGHT DECK",64,853,650,24,14,Muted);
+            navigationHint=Label(overlay,"Navigation","",930,853,630,24,14,Muted);
+            card=Rect(overlay,"Flight selection",64,100,640,710);
+            Label(card,"Eyebrow","CHOOSE YOUR SORTIE",0,0,560,26,17,MenuAccent);
+            heading=Label(card,"Title","SKY\nRACERS",-5,44,620,230,94,Color.white);heading.fontStyle=FontStyle.BoldAndItalic;
+            subtitle=Label(card,"Brief","",0,282,580,115,20,Muted);
+            primary=Button(card,"Primary",0,425,out primaryText);
+            secondary=Button(card,"Secondary",0,512,out secondaryText);
+            tertiary=Button(card,"Tertiary",0,599,out tertiaryText);
+            var panel=Panel(overlay,"Tactical board",760,100,776,475,new Color(.04f,.075f,.082f));
+            briefing=panel;
+            Panel(panel,"Map accent",0,0,3,475,MenuAccent);
+            mapTitle=Label(panel,"Map title","",26,19,725,32,22,MenuAccent);
+            var graphic=Rect(panel,"Terrain chart",26,66,724,310);map=graphic.gameObject.AddComponent<MissionMapGraphic>();map.raycastTarget=false;
+            mapDetail=Label(panel,"Map detail","",26,392,724,68,17,Muted);
+            var controls=Panel(overlay,"Controls",760,596,776,215,Color.clear);
+            Label(controls,"Title","PILOT CHECKLIST",0,0,725,28,16,MenuAccent);
+            controlsText=Label(controls,"Bindings","",0,42,760,170,18,Muted);
+            primary.gameObject.AddComponent<MenuOptionFocus>().focused=()=>Preview(false);
+            secondary.gameObject.AddComponent<MenuOptionFocus>().focused=()=>Preview(true);
+            UpdateBindings();
             primary.onClick.AddListener(() => {
                 if (run.State == RunState.Paused) run.Resume();
                 else if (run.State == RunState.Menu) run.StartRun();
@@ -74,14 +101,18 @@ namespace SkyRacers
             bool ended = run.State == RunState.Failed || run.State == RunState.Won;
             overlay.gameObject.SetActive((menu || pause || ended) && !run.ShowingCrash);
             hud.gameObject.SetActive(!menu && !ended);
-            primaryText.text = pause ? "CONTINUAR VOO  →" : menu ? "CANYON 01   /   VOAR  →" : "TENTAR NOVAMENTE  →";
-            secondaryText.text = pause ? "REINICIAR VOO" : menu ? "VOO LIVRE   /   TESTAR FÍSICA  →" : "MENU PRINCIPAL";
-            tertiary.gameObject.SetActive(pause || menu); tertiaryText.text = menu ? "SAIR" : "MENU PRINCIPAL";
+            primaryText.text = pause ? "CONTINUAR VOO" : menu ? "01   /   OPERAÇÃO CÂNION" : "TENTAR NOVAMENTE";
+            secondaryText.text = pause ? "REINICIAR VOO" : menu ? "02   /   VOO LIVRE" : "MENU PRINCIPAL";
+            tertiary.gameObject.SetActive(pause || menu); tertiaryText.text = menu ? "03   /   ENCERRAR SESSÃO" : "MENU PRINCIPAL";
             heading.text = menu ? "SKY\nRACERS" : pause ? "VOO\nPAUSADO" : run.State == RunState.Won ? "MISSÃO\nCUMPRIDA" : "FIM DA\nRUN";
-            if (menu) subtitle.text = "Corra contra o relógio dentro do cânion.\n\nOu teste o caça em voo livre, sem teto de altitude nem percurso obrigatório.";
-            else if (pause) subtitle.text = run.IsFreeFlight ? "VOO LIVRE\n\nExplore o cenário sem limite de altitude. As colisões continuam ativas." : "A física e o cronômetro estão pausados.\n\nContinue ou tente uma nova trajetória.";
+            if (menu) subtitle.text = "Voe baixo. Cruze a ponte. Volte inteiro.\n\nUma missão de ida e volta, ou um campo de voo aberto para dominar o caça.";
+            else if (pause) subtitle.text = run.IsFreeFlight ? "VOO LIVRE\n\nCampo de treino independente. Sem teto nem ameaças; colisões ativas." : "A física e o cronômetro estão pausados.\n\nContinue ou tente uma nova trajetória.";
             else if (run.State == RunState.Won) subtitle.text = (run.NewRecord ? "NOVO RECORDE!\n" : "PERCURSO CONCLUÍDO\n") + RecordStore.Format(run.Elapsed) + "\nMelhor: " + RecordStore.Format(RecordStore.Best);
             else subtitle.text = run.Reason + (run.IsFreeFlight ? "\n\nVOO LIVRE / Reinicie para continuar testando." : "\n\nTempo: " + RecordStore.Format(run.Elapsed));
+            briefing.gameObject.SetActive(menu || pause);
+            if(menu)Preview(false);
+            var buttons=tertiary.gameObject.activeSelf?new[]{primary,secondary,tertiary}:new[]{primary,secondary};
+            for(int i=0;i<buttons.Length;i++)buttons[i].navigation=new Navigation {mode=Navigation.Mode.Explicit,selectOnUp=buttons[(i+buttons.Length-1)%buttons.Length],selectOnDown=buttons[(i+1)%buttons.Length]};
             if (overlay.gameObject.activeSelf && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(primary.gameObject);
         }
         public void UpdateTelemetry()
@@ -89,16 +120,54 @@ namespace SkyRacers
             if (run.Aircraft == null) return;
             var plane = run.Aircraft;
             float kmh = plane.Speed * Mathf.Sqrt(FlightDynamics.Density(plane.transform.position.y) / 1.225f) * 3.6f;
-            float agl = plane.transform.position.y - run.Course.FloorAt(plane.transform.position.z);
+            float agl = plane.transform.position.y - run.FloorAt(plane.transform.position);
             speed.text = $"{kmh:0000}"; altitude.text = $"{agl:000}";
             mach.text = $"KM/H   M {plane.Mach:0.00}";
             power.text = $"THR  {plane.Throttle*100:000}%" + (plane.Afterburner ? "  AB" : "");
             powerBar.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 180 * plane.Throttle);
             UpdateTape(speedTicks, kmh, 50); UpdateTape(altitudeTicks, agl, 25);
             float margin = run.Course.CeilingAt(plane.transform.position) - plane.HighestPoint;
-            warning.text = run.IsFreeFlight ? "VOO LIVRE\nSEM LIMITE" : margin < 60 ? (Mathf.Repeat(Time.unscaledTime, .6f) < .4f ? "ALTITUDE\nDESCEND" : "") : $"LIMIT {run.Course.ceiling:0} M";
-            distance.text = run.IsFreeFlight ? "" : $"DIST  {run.RemainingDistance / 1000:0.0} KM";
-            countdown.text = run.State == RunState.Countdown ? $"READY  {Mathf.CeilToInt(run.Countdown)}" : "";
+            bool incoming=run.Defense.Incoming>0;
+            warning.color=incoming?new Color(1,.38f,.15f):Accent;
+            warning.text=incoming?$"MISSILE  {run.Defense.NearestMissileDistance:0} M\nEVADIR / FLARES":run.IsFreeFlight?"GRANITE RANGE\nVOO LIVRE":run.Defense.Acquiring?"RADAR LOCK\nDESCEND":margin<60?"ALTITUDE\nDESCEND":$"RADAR  {run.Course.ceiling:0} M";
+            threats.text="";
+            for(int i=0;i<run.Defense.Incoming;i++)
+            {
+                if(!run.Defense.TryGetMissilePosition(i,out var missilePosition))continue;
+                Vector3 relative=plane.transform.InverseTransformDirection(missilePosition-plane.Body.position);
+                float range=relative.magnitude;
+                string side=Mathf.Abs(relative.z)>=Mathf.Abs(relative.x)?(relative.z>=0?"FRENTE":"ATRÁS"):(relative.x>=0?"DIREITA":"ESQUERDA");
+                threats.text+=$"SAM {i+1}  {range:0} M  {side}\n";
+            }
+            distance.text=run.IsFreeFlight?"":$"RESTAM  {run.RemainingDistance/1000:0.0} KM";
+            countdown.text=run.State==RunState.Countdown?$"READY  {Mathf.CeilToInt(run.Countdown)}":run.TurnNotice?"ARCO CRUZADO / RETORNE À BASE":"";
+            objective.text=run.IsFreeFlight?"TREINO / SEM RESTRIÇÕES":run.Returning?"02 / RETORNO À BASE":"01 / IDA AO MARCO";
+            Vector3 destination=run.Course.route[Mathf.Clamp(run.NextSector,0,run.Course.route.Length-1)]-plane.transform.position;
+            float headingDegrees=Mathf.Repeat(Mathf.Atan2(destination.x,destination.z)*Mathf.Rad2Deg,360);
+            bearing.text=run.IsFreeFlight?"":$"RUMO AO PERCURSO  {headingDegrees:000}°";
+            flares.text=$"FLARES  {run.Flares:00} / 10";
+            clock.text=run.IsFreeFlight?"":$"TIME  {RecordStore.Format(run.Elapsed)}";
+
+        }
+        void Update()
+        {
+            if(controlsText!=null && lastPad!=(Gamepad.current!=null))UpdateBindings();
+        }
+        void UpdateBindings()
+        {
+            lastPad=Gamepad.current!=null;
+            navigationHint.text=lastPad?"D-PAD / ANALÓGICO: SELECIONAR     X / A: CONFIRMAR":"SETAS: SELECIONAR     ENTER: CONFIRMAR     MOUSE: CLICAR";
+            controlsText.text=lastPad
+                ? "L STICK     Pitch / roll         R STICK     Câmera\nR2 / L2      Potência              R1 / L1        Yaw\nX / A          Airbrakes             CÍRCULO / B    Flare\nOPTIONS / START     Pausa\nCâmera retorna após 10 s sem mover o analógico."
+                : "W / S     Pitch       A / D     Roll       Q / E     Yaw\nSHIFT / CTRL     Potência         X     Airbrakes\nF     Flare        SETAS     Câmera        ESC     Pausa\nControle compatível: conecte e jogue.\nR2/L2 potência · X/A freio · círculo/B flare";
+        }
+        void Preview(bool free)
+        {
+            if(run.State!=RunState.Menu)return;
+            map.Configure(run.Course,free);
+            mapTitle.text=free?"02 / GRANITE RANGE":"01 / OPERAÇÃO CÂNION";
+            mapDetail.text=free?"20 × 20 KM   /   MONTANHAS + ARCOS + OBSTÁCULOS\nVoo aberto. Mesma física. Sem radar nem cronômetro."
+                : $"{run.Course.TotalDistance*2/1000:0.0} KM   /   IDA + RETORNO   /   10 FLARES\nSAMs em todo o percurso acima de {run.Course.ceiling:0} M. Use o relevo como proteção.";
         }
         Text Gauge(string title, float x, float y, Text[] ticks)
         {
@@ -151,11 +220,15 @@ namespace SkyRacers
         }
         Button Button(Transform parent, string name, float x, float y, out Text text)
         {
-            var p = Panel(parent, name, x, y, 496, 64, name == "Primary" ? Accent : new Color(.14f, .19f, .21f));
+            var p = Panel(parent, name, x, y, 580, 72, name == "Primary" ? new Color(.19f,.24f,.23f) : new Color(.06f,.10f,.11f));
+            Panel(p,"Selection rule",0,0,3,72,MenuAccent);
             p.GetComponent<Image>().raycastTarget = true;
             var button = p.gameObject.AddComponent<Button>(); button.targetGraphic = p.GetComponent<Image>();
-            var colors = button.colors; colors.highlightedColor = new Color(.85f, .88f, .84f); colors.pressedColor = new Color(.65f, .72f, .6f); button.colors = colors;
-            text = Label(p, "Text", "", 20, 0, 456, 64, 20, name == "Primary" ? Ink : Color.white); text.alignment = TextAnchor.MiddleLeft;
+            p.GetComponent<Image>().color=Color.white;
+            var colors = button.colors; colors.normalColor=new Color(.055f,.09f,.10f);colors.highlightedColor=new Color(.17f,.26f,.25f);
+            colors.selectedColor=new Color(.31f,.25f,.15f);colors.pressedColor=new Color(.44f,.35f,.19f);colors.fadeDuration=.12f;button.colors = colors;
+            text = Label(p, "Text", "", 20, 0, 490, 72, 19, Color.white); text.alignment = TextAnchor.MiddleLeft;
+            var arrow=Label(p,"Action arrow","→",530,0,30,72,22,MenuAccent);arrow.alignment=TextAnchor.MiddleCenter;
             return button;
         }
     }

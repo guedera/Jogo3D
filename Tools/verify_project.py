@@ -57,7 +57,8 @@ def compile_scripts():
     version = re.search(r"m_EditorVersion: (\S+)", (ROOT / "ProjectSettings/ProjectVersion.txt").read_text())[1]
     scripting = Path(f"/Applications/Unity/Hub/Editor/{version}/Unity.app/Contents/Resources/Scripting")
     compiler = next((scripting / "DotNetSdk/sdk").glob("*/Roslyn/bincore/csc.dll"))
-    response = next((ROOT / "Library/Bee/artifacts").glob("*/Assembly-CSharp.rsp"))
+    responses = list((ROOT / "Library/Bee/artifacts").glob("*/Assembly-CSharp.rsp"))
+    response = next(p for p in responses if "UnityEditor.CoreModule" in p.read_text())
     common = [line for line in response.read_text().splitlines()
               if not line.startswith(("-out:", "-refout:", "-analyzer:", "/additionalfile:", '"Assets/'))]
     with tempfile.TemporaryDirectory(prefix="skyracers-check-") as temporary:
@@ -79,7 +80,7 @@ def compile_scripts():
         response_file = directory / "FlightChecks.rsp"
         args = ["-nologo", "-target:exe", "-nostdlib+", f'-out:"{output}"']
         args += [f'-r:"{path}"' for path in framework.glob("*.dll")]
-        args += [f'"{ROOT / "Assets/Scripts" / name}"' for name in ("FlightDynamics.cs", "HudTape.cs", "FlightSurfaceMixer.cs")]
+        args += [f'"{ROOT / "Assets/Scripts" / name}"' for name in ("FlightDynamics.cs", "HudTape.cs", "FlightSurfaceMixer.cs", "MissionRules.cs")]
         args += [f'"{ROOT.parent / "Tools/FlightChecks.cs"}"']
         response_file.write_text("\n".join(args))
         subprocess.run([str(runtime_root / "dotnet"), str(compiler), "@" + str(response_file)], check=True)

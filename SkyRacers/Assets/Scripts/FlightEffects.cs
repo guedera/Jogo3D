@@ -80,8 +80,9 @@ namespace SkyRacers
             }
             foreach(var trail in trails) {trail.emitting=active&&!broken;if(!active&&!paused)trail.Clear();}
             float margin=plane.Run.Course.CeilingAt(transform.position)-plane.HighestPoint;
-            bool danger=active&&!plane.Run.IsFreeFlight&&margin<60;
-            if(danger) {alarm.pitch=margin<25?1.5f:1;if(!alarm.isPlaying)alarm.Play();}
+            bool incoming=plane.Run.Defense!=null&&plane.Run.Defense.Incoming>0;
+            bool danger=active&&(incoming||(!plane.Run.IsFreeFlight&&margin<60));
+            if(danger) {alarm.pitch=incoming?2.4f:margin<25?1.5f:1;alarm.volume=incoming?.32f:.22f;if(!alarm.isPlaying)alarm.Play();}
             else alarm.Stop();
             if(active && previousMach<1 && plane.Mach>=1) SonicBoom();
             previousMach=plane.Mach;

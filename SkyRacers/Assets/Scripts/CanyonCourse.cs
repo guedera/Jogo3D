@@ -5,7 +5,7 @@ namespace SkyRacers
 {
     public sealed class CanyonCourse : MonoBehaviour
     {
-        [Tooltip("Allowed height above the local canyon floor, not world altitude.")]
+        [Tooltip("Radar exposure height above the local canyon floor, not world altitude.")]
         public float ceiling = 450;
         public float length = 40000;
         public Material rockMaterial, markerMaterial, darkMaterial;
@@ -55,12 +55,12 @@ namespace SkyRacers
                 float x = 2.7f * ramp * (420 * Mathf.Sin(t * Mathf.PI * 8) + 160 * Mathf.Sin(t * Mathf.PI * 17));
                 float y = ramp * (110 + 85 * Mathf.Sin(t * Mathf.PI * 4 - .4f) + 35 * Mathf.Sin(t * Mathf.PI * 11));
                 route[i] = new Vector3(x, y, t * length);
-                widths[i] = .36f * (Mathf.Lerp(140, 92, t) + 12 * Mathf.Sin(t * Mathf.PI * 12));
+                widths[i] = Mathf.Lerp(.36f * (Mathf.Lerp(140, 92, t) + 12 * Mathf.Sin(t * Mathf.PI * 12)), 3200, Mathf.SmoothStep(0,1,Mathf.InverseLerp(.94f,1,t)));
                 if (i > 0) cumulative[i] = cumulative[i - 1] + Vector3.Distance(route[i - 1], route[i]);
             }
             var random = new System.Random(1806);
             var rings = new List<Vector3[]>();
-            for (int i = -4; i <= count + 3; i++)
+            for (int i = -4; i <= count + 125; i++)
             {
                 int n = Mathf.Clamp(i, 0, count - 1);
                 Vector3 center = route[n];
@@ -70,7 +70,10 @@ namespace SkyRacers
                 float w = widths[n];
                 float jl = (float)random.NextDouble() * 16, jr = (float)random.NextDouble() * 16;
                 float ridge = 300 + 130 * Mathf.Sin(n * .13f) + 100 * Mathf.Sin(n * .051f);
-                float[] offsets = { -w - 1800, -w - 600, -w * 1.35f - jl, -w * 1.12f - jl, -w, 0, w, w * 1.12f + jr, w * 1.35f + jr, w + 600, w + 1800 };
+                // Keep every ring ordered even in the wide turnaround basin.
+                float shoulder = Mathf.Max(w + 600, w * 1.35f + 180);
+                float outerRidge = Mathf.Max(w + 1800, shoulder + 1200);
+                float[] offsets = { -outerRidge, -shoulder, -w * 1.35f - jl, -w * 1.12f - jl, -w, 0, w, w * 1.12f + jr, w * 1.35f + jr, shoulder, outerRidge };
                 float[] heights = { ceiling + ridge, ceiling + 60, ceiling, ceiling * .48f + jl, 0, 0, 0, ceiling * .48f + jr, ceiling, ceiling + 60, ceiling + ridge * 1.2f };
                 var ring = new Vector3[11];
                 for (int j = 0; j < ring.Length; j++) ring[j] = center + right * offsets[j] + Vector3.up * heights[j];
@@ -92,10 +95,6 @@ namespace SkyRacers
                         color *= .97f + (float)random.NextDouble() * .06f;
                         ground.Quad(rings[i][j], rings[i + 1][j], rings[i + 1][j + 1], rings[i][j + 1], color);
                     }
-                    // Cold stream at the very bottom, following the same elevation profile.
-                    var c0 = rings[i][5] + Vector3.up * .2f; var c1 = rings[i + 1][5] + Vector3.up * .2f;
-                    Vector3 right = (rings[i][6] - rings[i][5]).normalized;
-                    ground.Quad(c0 - right * 7, c1 - right * 7, c1 + right * 7, c0 + right * 7, new Color(.12f, .29f, .34f));
                     for (int side = 0; side < 2; side++)
                     for (int tree = 0; tree < 5; tree++)
                     {
@@ -122,20 +121,95 @@ namespace SkyRacers
                 ground.Create(transform, rockMaterial, "Alpine canyon " + start, true);
                 forest.Create(transform, rockMaterial, "Pine forest " + start, false);
             }
+            BuildSurroundingMountains(rings);
             BuildBridge();
             BuildWaterfall(count / 3, -1, rings);
             BuildWaterfall(count * 3 / 4, 1, rings);
-            var finish = route[count - 1]; var acrossFinish = RightAt(count - 1);
-            float halfWidth = widths[count - 1] * .9f;
-            // Finish is a painted strip across the floor, without artificial poles.
-            var stripe = new AlpineMesh();
-            Vector3 along = Vector3.Cross(acrossFinish, Vector3.up);
-            stripe.Quad(finish - acrossFinish * halfWidth - along * 5 + Vector3.up * .4f,
-                finish - acrossFinish * halfWidth + along * 5 + Vector3.up * .4f,
-                finish + acrossFinish * halfWidth + along * 5 + Vector3.up * .4f,
-                finish + acrossFinish * halfWidth - along * 5 + Vector3.up * .4f, new Color(.8f,.85f,.8f));
-            stripe.Create(transform, rockMaterial, "Finish marking", false);
+            BuildMissionArch(0, "BASE / CHEGADA", 32, 110, 40);
+            BuildMissionArch(count-1, "RETORNO", 90, 180, 60);
         }
+
+        // Wide terrain apron shares the canyon's edge vertices exactly. The flight
+        // corridor stays narrow; only the landscape outside it is extended.
+        void BuildMissionArch(int sector,string label,float radius,float spring,float rise)
+        {
+            var root=new GameObject(label+" - mission gate").transform;
+            root.SetParent(transform,false);root.position=route[sector];
+            root.rotation=Quaternion.LookRotation(Vector3.Cross(RightAt(sector),Vector3.up));
+            var arch=new AlpineMesh();
+            // Curved band instead of a solid wall above the opening.
+            const int segments=48;
+            for(int i=0;i<segments;i++)
+            {
+                float a=Mathf.PI*i/segments,b=Mathf.PI*(i+1)/segments;
+                Vector3 innerA=new Vector3(Mathf.Cos(a)*radius,spring+Mathf.Sin(a)*rise,0);
+                Vector3 innerB=new Vector3(Mathf.Cos(b)*radius,spring+Mathf.Sin(b)*rise,0);
+                Vector3 outerA=new Vector3(Mathf.Cos(a)*(radius+4),spring+Mathf.Sin(a)*(rise+4),0);
+                Vector3 outerB=new Vector3(Mathf.Cos(b)*(radius+4),spring+Mathf.Sin(b)*(rise+4),0);
+                var z=Vector3.forward*3;
+                arch.Quad(innerA-z,outerA-z,outerB-z,innerB-z,Color.white);
+                arch.Quad(innerB+z,outerB+z,outerA+z,innerA+z,Color.white);
+                arch.Quad(innerA-z,innerB-z,innerB+z,innerA+z,Color.white);
+                arch.Quad(outerA+z,outerB+z,outerB-z,outerA-z,Color.white);
+            }
+            foreach(int side in new[]{-1,1})arch.Box(new Vector3(side*(radius+2),spring/2,0),new Vector3(4,spring,6),Color.white);
+            arch.Create(root,markerMaterial,label+" arch",true);
+        }
+
+        void BuildSurroundingMountains(List<Vector3[]> canyon)
+        {
+            const int bands=12, caps=16;
+            const float halfWidth=24000, endExtension=16000;
+            var expanded=new List<Vector3[]>();
+            foreach(var ring in canyon)
+            {
+                var row=new Vector3[ring.Length+bands*2];
+                System.Array.Copy(ring,0,row,bands,ring.Length);
+                for(int side=0;side<2;side++)
+                {
+                    Vector3 edge=ring[side==0?0:ring.Length-1];
+                    for(int b=1;b<=bands;b++)
+                    {
+                        float t=b/(float)bands;
+                        Vector3 point=new Vector3(Mathf.Lerp(edge.x,side==0?-halfWidth:halfWidth,t),0,edge.z);
+                        point.y=Mathf.Lerp(edge.y,MountainHeight(point.x,point.z),Mathf.SmoothStep(0,1,Mathf.Min(1,t*4)));
+                        row[side==0?bands-b:bands+ring.Length-1+b]=point;
+                    }
+                }
+                expanded.Add(row);
+            }
+            var rows=new List<Vector3[]>();
+            Vector3[] Cap(Vector3[] edge,int step,int sign)
+            {
+                var row=new Vector3[edge.Length];float t=step/(float)caps;
+                for(int j=0;j<row.Length;j++)
+                {
+                    row[j]=edge[j]+Vector3.forward*(sign*endExtension*t);
+                    row[j].y=Mathf.Lerp(edge[j].y,MountainHeight(row[j].x,row[j].z),Mathf.SmoothStep(0,1,Mathf.Min(1,t*3)));
+                }
+                return row;
+            }
+            for(int i=caps;i>0;i--)rows.Add(Cap(expanded[0],i,-1));
+            rows.AddRange(expanded);
+            for(int i=1;i<=caps;i++)rows.Add(Cap(expanded[expanded.Count-1],i,1));
+            for(int start=0;start<rows.Count-1;start+=16)
+            {
+                var mesh=new AlpineMesh();
+                for(int i=start;i<Mathf.Min(start+16,rows.Count-1);i++)
+                for(int j=0;j<rows[i].Length-1;j++)
+                {
+                    bool insideCanyon=i>=caps&&i<caps+canyon.Count-1;
+                    if(insideCanyon&&j>=bands&&j<bands+10)continue;
+                    float height=(rows[i][j].y+rows[i+1][j+1].y)*.5f;
+                    Color color=Color.Lerp(new Color(.31f,.39f,.34f),new Color(.80f,.84f,.85f),Mathf.InverseLerp(650,1200,height));
+                    mesh.Quad(rows[i][j],rows[i+1][j],rows[i+1][j+1],rows[i][j+1],color);
+                }
+                mesh.Create(transform,rockMaterial,"Alpine canyon outer mountains "+start,true);
+            }
+        }
+        static float MountainHeight(float x,float z)
+            => 520+Mathf.PerlinNoise(x*.00028f+73,z*.00028f+41)*750
+                +Mathf.PerlinNoise(x*.0009f+11,z*.0009f+29)*230;
 
         void BuildWaterfall(int index, int side, List<Vector3[]> rings)
         {
@@ -179,22 +253,21 @@ namespace SkyRacers
             masonry.Create(bridge, rockMaterial, "Stone arches and deck", true);
             // One bridge only; its deck reaches above the local flight ceiling.
         }
-        public bool CrossedBridgePlane(Vector3 previous, Vector3 current, out Vector3 crossing)
+        public bool CrossedBridgePlane(Vector3 previous, Vector3 current, out Vector3 crossing, bool returning = false)
         {
             Vector3 normal = Vector3.Cross(RightAt(BridgeSector), Vector3.up);
             float a = Vector3.Dot(previous - route[BridgeSector], normal), b = Vector3.Dot(current - route[BridgeSector], normal);
             crossing = current;
-            if (a >= 0 || b < 0) return false;
+            if (!MissionRules.CrossesPlane(a,b,returning)) return false;
             crossing = Vector3.Lerp(previous, current, -a / (b - a)); return true;
         }
         public bool UnderBridge(Vector3 point)
         {
             Vector3 relative = point - route[BridgeSector];
             float x = Mathf.Abs(Vector3.Dot(relative, RightAt(BridgeSector)));
-            if (x + 8 >= BridgeHalfSpan) return false;
-            // Reserve clearance for wings and tail, not just the aircraft centre.
-            float arch = BridgeSpring + BridgeRise * Mathf.Sqrt(1 - Mathf.Pow((x + 8) / BridgeHalfSpan, 2));
-            return relative.y > 3 && relative.y + 3 < arch;
+            // Route validation checks the actual opening. Aircraft colliders already
+            // handle wings/tail and roll; a fixed 8 m inset caused false defeats.
+            return MissionRules.WithinBridgeOpening(x, relative.y, BridgeHalfSpan, BridgeSpring, BridgeRise);
         }
 
         GameObject Primitive(string label, Vector3 p, Vector3 scale, Material material)
@@ -203,14 +276,21 @@ namespace SkyRacers
             go.transform.SetParent(transform, false); go.transform.position = p; go.transform.localScale = scale;
             go.GetComponent<Renderer>().sharedMaterial = material; go.isStatic = true; return go;
         }
-        public bool CrossedSector(int sector, Vector3 previous, Vector3 current)
+        public bool CrossedSector(int sector, Vector3 previous, Vector3 current, bool returning = false)
         {
             Vector3 tangent = Vector3.Cross(RightAt(sector), Vector3.up);
             float before = Vector3.Dot(previous - route[sector], tangent), after = Vector3.Dot(current - route[sector], tangent);
-            if (before >= 0 || after < 0) return false;
+            if (!MissionRules.CrossesPlane(before,after,returning)) return false;
             Vector3 crossing = Vector3.Lerp(previous, current, -before / (after - before));
+            if(sector==0 || sector==route.Length-1)
+            {
+                Vector3 relative=crossing-route[sector];
+                bool home=sector==0;
+                if(!MissionRules.WithinBridgeOpening(Vector3.Dot(relative,RightAt(sector)),relative.y,
+                    home?32:90,home?110:180,home?40:60))return false;
+            }
             float floor = FloorAt(crossing.z);
-            return crossing.y > floor && crossing.y < floor + ceiling && Mathf.Abs(Vector3.Dot(crossing - route[sector], RightAt(sector))) < widths[sector] * 1.35f;
+            return crossing.y > floor && Mathf.Abs(Vector3.Dot(crossing - route[sector], RightAt(sector))) < widths[sector] * 1.35f;
         }
     }
 }
