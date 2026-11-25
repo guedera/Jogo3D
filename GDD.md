@@ -1,244 +1,198 @@
 # SkyRacers — Game Design Document
 
-## Estado atual
+Atualizado em 24/11/2026. Este documento descreve a implementação atual do projeto Unity 6000.6.6f1, com URP e Input System.
 
-Atualizado em 24/11/2026. Implementado em Unity 6000.6.6f1, URP e Input System. A revisão inclui missão de ida e volta, SAMs, dez flares, mapa independente de voo livre, controle e menu de operações. Compilação, referências e testes numéricos passaram; validação em Play Mode e build Windows permanecem pendentes.
+## Conceito e experiência
 
-## Conceito e escopo
+SkyRacers é um jogo 3D solo de corrida aérea e evasão, inspirado no voo em cânion de Top Gun: Maverick. O jogador pilota um caça inspirado no F/A-18, atravessa um cânion alpino e retorna à base no menor tempo possível. Curvas, obstáculos, gestão de energia e exposição à defesa antiaérea formam o desafio.
 
-Jogo 3D de corrida aérea solo com uma única fase. O jogador começa pilotando um caça inspirado no F/A-18, já em voo dentro de um cânion, e precisa completar a ida e retornar à base no menor tempo possível. A dificuldade vem das curvas, da gestão da velocidade e da defesa antiaérea: na volta, ultrapassar o teto expõe o jogador a mísseis.
+O escopo inclui uma missão de ida e volta e um mapa independente de voo livre. Não há multiplayer, armas ofensivas do jogador, decolagem ou pouso. A pilotagem combina forças aerodinâmicas com assistência para teclado e controle; os parâmetros priorizam o jogo e não representam uma simulação certificada do F/A-18.
 
-Decisões confirmadas:
+## Objetivos e regras da missão
 
-- Câmera em terceira pessoa atrás do avião.
-- Pilotagem semirrealista com sustentação dependente de velocidade e ângulo de ataque, arrasto induzido e controle assistido para teclado. Resposta rápida de roll, limite de −5/+10,5 G (envelope de jogo) e estol progressivo.
-- Cronômetro crescente e recorde de menor tempo; não há contagem regressiva para derrota.
-- O percurso completo tem aproximadamente 92,6 km; a duração será medida em playtest, incluindo a curva de retorno e a evasão.
-- Modelo do caça fornecido pelo usuário; cenário construído no projeto.
-- Superfícies móveis animadas durante o voo. Dobra das asas desativada, mantendo-as estendidas.
-- Airbrakes acionados enquanto X estiver pressionado.
+1. O caça começa alinhado com o cânion, 65 m acima do piso, a 170 m/s (612 km/h), com potência de 62%.
+2. Uma preparação de três segundos antecede o movimento e o cronômetro.
+3. O jogador percorre os setores na ordem e atravessa o arco central da ponte no meio da fase.
+4. Passar por dentro do arco de RETORNO, no último setor, inicia a volta. O jogador faz a curva manualmente na bacia de manobra; não há teleporte nem vitória nesse ponto.
+5. Na volta, percorre os setores na ordem inversa e atravessa novamente a ponte central.
+6. Passar por dentro do arco da BASE, no primeiro setor, após completar o trajeto, encerra o cronômetro e concede vitória.
+7. Colisão com cenário ou impacto de míssil encerra a run. Contornar a passagem central da ponte também causa derrota.
+8. Subir acima de 450 m sobre o piso local não causa derrota automática: permite aquisição e disparos de SAMs tanto na ida quanto na volta.
 
-## Regras da fase
+O percurso tem 1.001 pontos e aproximadamente 46,3 km por perna, totalizando 92,6 km de ida e volta, sem contar desvios e a manobra de retorno. A distância do HUD acompanha o progresso pelos setores. Não há prazo fixo para derrota: vence-se completando a missão, e o menor tempo é salvo localmente.
 
-1. Começar em voo, alinhado com o corredor inicial, com velocidade e potência suficientes para sustentar o avião.
-2. Percorrer os setores até o marco final, fazer a curva manualmente e retornar pelos setores na ordem inversa.
-3. Colidir com o chão, paredes ou obstáculos encerra a run.
-4. Ultrapassar o teto não encerra a run: na volta, permite aquisição e lançamento de SAMs quando há visão direta. Na ida há apenas aviso.
-5. Cruzar a base após completar ida e volta encerra o cronômetro e mostra a vitória; o extremo do cânion nunca encerra a missão.
-6. Salvar o melhor tempo localmente apenas em runs concluídas e válidas.
-7. Reiniciar restaura avião, câmera, potência, superfícies móveis, percurso, cronômetro e dez flares, eliminando mísseis e destroços.
+Setores não são checkpoints de respawn. Reiniciar restaura o início da missão, cronômetro, potência, avião, câmera e dez cargas de flares; remove projéteis, contramedidas e destroços. Passar acima ou ao lado dos arcos de missão não ativa o marco nem causa derrota automática: o jogador deve reposicionar e cruzar corretamente.
 
-Contagem de preparação de 3 segundos com avião e cronômetro parados; teto de voo de 450 unidades acima do relevo local; validação sequencial de setores invisíveis para impedir atalhos. Setores não são pontos de respawn: a derrota reinicia desde o começo. A ponte central exige passagem sob seu arco principal nos dois sentidos; contorná-la encerra a run.
+## Cenário e marcos
+
+O cânion tem rocha cinza, pinheiros, neve parcial, montanhas, duas cachoeiras com névoa e variações de elevação. O piso varia aproximadamente entre −1 e 209 m de altitude absoluta. O corredor é profundo e estreito: referência de 450 m de profundidade e cerca de 59–101 m de largura no fundo, exceto a região de retorno. O riacho foi removido.
+
+| Marco | Geometria e função |
+| --- | --- |
+| Arco da BASE | Vão de 64 m de largura, laterais abertas até 110 m e topo da abertura a 150 m; encerra a missão ao voltar |
+| Ponte central | Única ponte de pedra, com três arcos; passagem obrigatória pelo central, de 22 m de largura e abertura entre 408 e 438 m de altura |
+| Arco de RETORNO | Vão de 180 m de largura, laterais abertas até 180 m e topo da abertura a 240 m; inicia a volta |
+| Bacia final | Alargamento progressivo até 6,4 km e cerca de 5 km extras de terreno longitudinal para permitir a curva |
+
+A validação da ponte usa a abertura real. Asas e fuselagem são tratadas pelos colisores do avião, sem a antiga margem fixa de 8 m por lado que gerava derrotas indevidas. O tabuleiro fica a aproximadamente 458 m sobre o piso local.
+
+O terreno externo alcança aproximadamente 48 km de largura e possui 16 km adicionais nas duas extremidades do terreno anterior. As malhas externas compartilham as bordas do cânion para fechar o entorno sem alargar o corredor. O mundo permanece finito.
+
+## Defesa antiaérea
+
+SAMs podem atacar nas duas pernas da missão. O modo livre não possui defesa antiaérea.
+
+| Parâmetro | Valor atual |
+| --- | --- |
+| Exposição | Ponto mais alto do avião acima de 450 m sobre o piso local |
+| Alcance de aquisição | Até 6,5 km da bateria, com visão direta |
+| Tempo de aquisição | 1,5 s contínuo de exposição válida |
+| Intervalo entre disparos | Pelo menos 4 s |
+| Máximo simultâneo | Quatro mísseis ativos |
+| Velocidade inicial / máxima | 300 / 950 m/s |
+| Aceleração | 240 m/s² |
+| Agilidade | Até 32 G e 100°/s; raio de curva aumenta com a velocidade |
+| Perda de rastreamento por relevo | Mais de 0,8 s de visão bloqueada |
+| Tempo máximo de voo | 24 s |
+
+Descer ou perder a linha de visão interrompe novas aquisições. Mísseis já lançados continuam em voo; não desaparecem ao entrar no cânion. Podem atingir o terreno, ser desviados pelas contramedidas ou perder rastreamento. A colisão considera o deslocamento do míssil e do caça entre passos de física para reduzir atravessamentos em alta velocidade.
+
+Fumaça espessa e pluma visível ajudam a localizar a ameaça. O HUD lista distância em metros e direção relativa de cada míssil (frente, atrás, esquerda ou direita); o alerta principal destaca o mais próximo. O alarme de míssil tem prioridade sobre o de altitude.
+
+## Flares
+
+O estoque é de **dez cargas**, e não dez partículas individuais. Cada pressionamento libera uma salva de 24 flares, distribuídos em 12 pares bilaterais durante 0,55 s. O intervalo mínimo entre cargas é 0,6 s; segurar o botão não consome cargas continuamente.
+
+Os flares se abrem em leque a partir da posição atual do caça, com núcleo branco/dourado, rastro quente e fumaça. Um flare recente (menos de 2,5 s), visível e dentro do cone frontal do míssil pode desviá-lo entre 90 e 850 m de distância. Acionar tarde demais pode falhar. Reinício recupera dez cargas; pausa congela a sequência e a movimentação. Também é possível soltá-los no voo livre.
+
+Referência cinematográfica: [roteiro de Top Gun: Maverick](https://assets.scriptslug.com/live/pdf/scripts/top-gun-maverick-2022.pdf), especialmente pp. 72, 95 e 137. O jogo adota proteção pelo relevo, exposição na subida e evasão com recursos limitados. Os valores de cadência, velocidade e guiagem são ajustes próprios; “flare” representa a salva cinematográfica de contramedidas, sem reproduzir sensores reais.
+
+## Voo livre — Granite Range
+
+Mapa independente de 20 × 20 km com montanhas, florestas, 24 formações rochosas e sete arcos para treinar manobras. Começa imediatamente em (x = 0, z = −7500), 420 m acima do terreno, com a mesma física da missão.
+
+Não possui teto de altitude, SAMs, setores obrigatórios, cronômetro ou recorde. Colisões permanecem ativas. O terreno é finito, mas sair de seus limites não encerra automaticamente o voo. Reiniciar mantém o modo livre. A troca de modo ativa apenas o cenário correspondente.
 
 ## Controles
 
-| Tecla | Ação |
+| Ação | Teclado | Controle PlayStation / Xbox |
+| --- | --- | --- |
+| Aumentar / diminuir potência | Shift / Ctrl, segurados | R2 / L2 ou RT / LT |
+| Airbrakes | X, segurado | X / A, segurado |
+| Roll | A / D | Analógico esquerdo horizontal |
+| Pitch | S sobe, W desce | Analógico esquerdo: puxar sobe, empurrar desce |
+| Yaw / leme | Q / E | L1 / R1 ou LB / RB |
+| Uma carga de flares | F | Círculo / B |
+| Câmera orbital | Setas | Analógico direito |
+| Pausa / continuar | Esc | Options / Start |
+| Navegação no menu | Setas ou mouse | D-pad ou analógico esquerdo |
+| Confirmar no menu | Enter ou clique | X / A |
+
+Potência permanece no valor escolhido ao soltar teclas/gatilhos, entre 0 e 100%. Comandos opostos se anulam. Para uma curva coordenada, inclinar com roll e puxar pitch; yaw permite ajustes laterais.
+
+## Física e modelo
+
+Rigidbody atualizado em FixedUpdate, com passo de 0,02 s. Empuxo, arrasto, gravidade e sustentação determinam a velocidade. Sustentação depende de densidade, velocidade e ângulo de ataque. Há arrasto induzido, transônico, de derrapagem e dos airbrakes; estol progressivo, trim e proteção de ângulo de ataque/carga G.
+
+| Parâmetro | Valor |
 | --- | --- |
-| Shift | Aumentar gradualmente a potência enquanto pressionado |
-| Ctrl | Diminuir gradualmente a potência enquanto pressionado |
-| X, segurado | Abrir airbrakes; soltar fecha |
-| A / D | Roll para esquerda / direita |
-| S / W | Pitch: levantar / abaixar o nariz |
-| Q / E | Yaw para esquerda / direita |
-| F | Soltar um flare (dez por voo) |
-| Setas | Olhar ao redor |
-| Esc | Pausar e abrir menu; durante a pausa, voltar à run |
+| Massa / área de referência | 12.000 kg / 37,2 m² |
+| Aceleração-base do motor | 18 m/s² |
+| Pós-combustão | Mais 10 m/s² a 100% de potência |
+| Referência de Mach | 340 m/s |
+| Envelope do caça | −5 a +10,5 G |
+| Taxas máximas comandadas | Pitch 75°/s, roll 150°/s, yaw 24°/s |
+| Aceleração angular de pitch | 480°/s² |
+| Transição angular | 35 ms para pequena sensação de inércia |
 
-Controle: R2/L2 aumentam/diminuem potência; X (PlayStation) ou A (Xbox) aciona airbrakes; analógico esquerdo faz roll/pitch (puxar sobe); R1/L1 fazem yaw; analógico direito controla câmera; círculo/B solta flare; Options/Start pausa. Menus aceitam D-pad/analógico e X/A para confirmar.
+O modelo fornecido possui 115 nós, 74 meshes, 9 materiais/texturas e 5.351 triângulos. Foi ajustado para 18 m de comprimento, nariz em +Z e aproximadamente 14 m de envergadura. Trem e portas permanecem recolhidos. A animação de demonstração não roda durante o jogo.
 
-A potência permanece no valor selecionado ao soltar Shift/Ctrl, limitada a 0–100%. Inputs opostos simultâneos se anulam. S levanta o nariz como padrão inicial de controle aeronáutico.
+Oito superfícies são animadas: estabilizadores (nós 34/36), ailerons (12/28), flaps (10/22) e lemes (40/44). Pivôs seguem as dobradiças do asset. Flaps também respondem automaticamente à velocidade/ângulo de ataque; a frenagem mistura deflexões com saturação a ±35°. Dobra das asas (15/31) permanece desativada. Não há airbrake dorsal nem flaps de bordo de ataque separados no asset.
 
-## Pilotagem
+## Câmera, interface e efeitos visuais
 
-Usar um Rigidbody e atualizar a física em FixedUpdate. A potência governa o empuxo; a velocidade resulta de empuxo, arrasto, gravidade e sustentação. Aceleração e frenagem são graduais.
+Câmera traseira suavizada, com antecipação, acompanhamento parcial do roll e detecção de paredes. Setas/analógico direito permitem órbita; após dez segundos sem comando de câmera, ela recentraliza suavemente. Pausa congela a espera, e reinício centraliza imediatamente.
 
-- Roll inclina o avião e a direção da sustentação, contribuindo para as curvas.
-- Pitch controla a atitude e permite ganhar ou perder altitude.
-- Yaw permite ajustes laterais, com autoridade menor que uma curva coordenada.
-- Pouca velocidade reduz sustentação e faz o avião perder altitude de maneira progressiva.
-- Airbrakes aumentam o arrasto; não param o avião instantaneamente.
-- Amortecimento e assistência moderados mantêm a pilotagem acessível.
-- Limitar respostas extremas e ajustar os parâmetros por playtest, sem tentar reproduzir um simulador completo.
+Menu como painel de operações, com mapa vetorial, briefing, controles e seleção entre missão e voo livre. HUD lateral verde neon, com fitas móveis de velocidade indicada e altitude AGL, potência, Mach, distância restante, perna atual, rumo, tempo e estoque de cargas. O centro permanece livre de mira e instrumentos. Alertas de altitude aparecem nos últimos 60 m antes do teto.
 
-Definir largura das curvas, velocidade de cruzeiro e extensão do percurso em conjunto. A duração da ida e volta será medida em voo; não será inferida apenas do comprimento do cenário.
-
-## Câmera e leitura espacial
-
-Câmera suavizada atrás e acima do caça, com antecipação na direção do movimento. Acompanhar parcialmente o roll para transmitir inclinação sem tornar o horizonte difícil de ler. Ajustar distância e campo de visão discretamente conforme a velocidade.
-
-Evitar atravessar paredes usando detecção entre o avião e a posição desejada da câmera. Reposicionar imediatamente ao reiniciar, sem interpolar desde o ponto da colisão. Garantir visibilidade das pontas das asas e das próximas curvas. Setas/analógico direito orbitam a câmera; após dez segundos sem comando de câmera, ela retorna suavemente ao centro. Pausa congela esse tempo; reiniciar centraliza imediatamente.
-
-## Cenário
-
-Uma fase fixa de cânion alpino inspirada na atmosfera do voo em cânion de Top Gun: Maverick: rocha cinza, pinheiros, neve parcial, duas cachoeiras e montanhas ao fundo. O riacho foi removido. Piso e bordas sobem e descem ao longo da fase. A largura foi reduzida em 60% em relação à primeira versão alpina. As árvores são agrupadas em meshes por trecho para limitar a quantidade de renderers.
-
-Há uma única ponte de pedra, com três arcos, aproximadamente no meio do percurso. O arco central mantém 22 unidades de largura, com abertura de 408 unidades nas laterais e 438 no centro, antes das margens de segurança do avião. O tabuleiro alcança o teto local e a passagem é validada para impedir desvios laterais. A passagem exige alinhamento lateral das asas, com liberdade vertical dentro do vão alto. Pilares esbeltos sustentam o tabuleiro, sem parede maciça fechando o corredor.
-
-Progressão proposta:
-
-| Trecho | Objetivo |
+| Efeito | Implementação atual |
 | --- | --- |
-| Entrada ampla e quase reta | Aprender potência, atitude e frenagem |
-| Curvas abertas alternadas | Introduzir curvas com roll e pitch |
-| Curvas em S e estreitamentos | Exigir antecipação e uso dos airbrakes |
-| Sequência final | Combinar precisão e velocidade |
-| Marco final e bacia de manobra | Iniciar a volta, sem teleporte |
-| Retorno pelo cânion | Evitar exposição ao radar, evadir SAMs e administrar dez flares |
-| Base inicial | Encerrar a run válida e registrar tempo |
+| Fog | Linear, inicia a 700 m e encobre completamente a geometria a 2.700 m, antes do corte da câmera a pelo menos 3.500 m |
+| Nuvens | Grupos de partículas estáticas suaves, sem colisão, nos dois mapas; maiores e mais opacas, com um banco à frente do spawn |
+| Vinheta | Intensidade 0,30, suavidade 0,55 |
+| Aberração cromática | Intensidade 0,24 |
+| Pós-combustão | Chama azul ancorada nos bocais reais, intensificada a 100% |
+| Escapamento / asas | Fumaça discreta atrás dos motores e trilhas finas nas pontas das asas |
+| Boom sônico | Som e três anéis expansivos de condensação formando um cone curto, com 240 partículas e duração aproximada de 0,5–0,64 s |
+| Colisão | Separação das 74 meshes em destroços com colisores, fogo, fumaça, fragmentos e som; resultado após 2,5 s |
 
-Baterias SAM são a ameaça inimiga; não há armas ofensivas do jogador, multiplayer, decolagem ou pouso. Usar variação de rochas, iluminação e marcas visuais para orientar o jogador. Avisar sobre proximidade do teto usando texto/ícone além de cor.
+Boom sônico dispara somente ao cruzar de Mach < 1 para Mach ≥ 1 durante o voo ativo; não dispara ao desacelerar ou permanecer supersônico. HUD em overlay não recebe os efeitos de lente.
 
-## Modelo e animações
+Sombras PC: distância 600 m, atlas 4096 e quatro cascatas. Mobile: 300 m, atlas 2048 e duas cascatas. Florestas são agrupadas por trecho para reduzir renderers. O custo gráfico deve ser medido por plataforma.
 
-Asset importado e inspecionado: `low-poly-f18-super-hornet.zip`. Contém glTF, 115 nós, 74 meshes, 9 materiais/texturas e uma animação de demonstração. Total: 5.351 triângulos. Não há skin; as peças são animadas por transforms. O arquivo não contém autor ou licença.
+## Áudio e música
 
-As dimensões da geometria na pose de voo antes do ajuste são aproximadamente 2,798 × 0,655 × 3,568 unidades. O importador centraliza o modelo, orienta o nariz para +Z e ajusta o comprimento do conjunto para 18 unidades. O trem e suas portas usam as poses finais dos canais de animação. As dobradiças `bone4` e `bone6` ficam neutras, mantendo as asas estendidas.
+Motor, alarmes, impacto e boom sônico usam áudio procedural. O alerta de míssil tem tom mais alto que o de altitude.
 
-Mapeamento implementado: oito superfícies. Estabilizadores nos nós 34/36; ailerons externos nas meshes 12/28; flaps internos nas meshes 10/22; lemes nas meshes 40/44. Pivôs adicionais nas bordas de dobradiça preservam a pose original e seguem o enflechamento/inclinação das peças. Roll usa deflexão diferencial dos ailerons, flaps e estabilizadores; pitch usa os estabilizadores; yaw usa ambos os lemes. Flaps descem automaticamente em baixa velocidade ou alto ângulo de ataque. X mistura deflexões de frenagem, com saturação a ±35°. As dobradiças de dobra 15/31 não são animadas. Não existem flaps de bordo de ataque nem airbrake dorsal separados no asset; não é criada movimentação fictícia da asa inteira. A animação de demonstração não roda durante o jogo.
-
-Na importação:
-
-1. Conferir formato, materiais, texturas, orientação e dimensões reais da malha.
-2. Padronizar o prefab com eixo frontal +Z e superior +Y, preservando o modelo original como filho visual.
-3. Medir comprimento e envergadura após a importação; definir escala de jogo e dimensionar o cânion a partir dessas medidas.
-4. Identificar cada superfície, seu pivô, eixo local, posição neutra e amplitude segura.
-5. Usar referências explícitas às peças no prefab, sem depender de nomes presumidos.
-6. Criar colisores simplificados cobrindo fuselagem e asas, com detecção contínua adequada à velocidade.
-7. Preservar asas estendidas e trem de pouso recolhido, caso exista no modelo.
-
-Mapeamento visual pretendido, sujeito à estrutura real do asset:
-
-| Comando | Movimento visual |
+| Contexto | Música |
 | --- | --- |
-| Roll | Deflexão diferencial das superfícies disponíveis para rolagem |
-| Pitch | Movimento conjunto dos estabilizadores/elevadores disponíveis |
-| Yaw | Deflexão dos lemes |
-| Airbrakes | Abertura das superfícies de frenagem presentes no asset |
-| Potência | Intensidade dos efeitos de motor e do áudio |
+| Menu principal | Top Gun Anthem — Harold Faltermeyer |
+| Início da missão do cânion, incluindo preparação | Danger Zone — Kenny Loggins |
+| Voo livre | Sem música de fundo |
 
-As deflexões devem interpolar suavemente e voltar ao neutro. Não animar a dobra das asas. Se o modelo não tiver um airbrake separado, definir uma representação compatível com suas superfícies antes de implementar.
+Arquivos fornecidos pelo usuário, convertidos para OGG em `Assets/Resources/Music/Menu.ogg` e `Canyon.ogg`. O sistema usa repetição, áudio 2D e entrada suave até volume 0,28. Pausa suspende a música e continuar retoma do mesmo ponto. Reiniciar a missão reinicia a faixa; voltar ao menu reinicia a música do menu. A faixa da missão continua nas telas de resultado até trocar de contexto.
 
-## Interface e estados
+## Estados e persistência
 
-Menu principal como painel de operações: tipografia grande, mapas vetoriais do traçado/relevo, briefing da seleção e checklist de controles. OPERAÇÃO CÂNION, VOO LIVRE e sair. Voo livre inicia imediatamente em Granite Range, mapa separado de 20 × 20 km, com montanhas, florestas, 24 formações rochosas e sete arcos. Mantém colisões e física, mas desativa teto/alarme, SAMs, percurso obrigatório, cronômetro, chegada e recorde. Reiniciar preserva o modo escolhido. Não mostrar fases fictícias bloqueadas.
+Estados: Menu, Preparação, Correndo, Pausado, Derrota e Vitória. Pausa congela física, cronômetro, mísseis, contramedidas e música. Oferece continuar, reiniciar e menu principal. Perder o foco durante a run também pausa.
 
-HUD: instrumentos laterais verde neon de velocidade indicada em km/h, Mach, altitude acima do piso (AGL) e potência. As fitas de velocidade/altitude deslizam continuamente sob índices fixos, com recorte das bordas. A distância restante de ida + volta aparece na lateral no modo corrida, junto da perna atual, rumo ao próximo setor, tempo e estoque de flares. Alerta visual/sonoro de míssil tem prioridade sobre o aviso de altitude. Sem mira, mensagens ou cronômetro no centro. Contagem inicial na lateral. Cronômetro permanece ativo e é mostrado no resultado. Alerta de altitude sonoro e indicação lateral intermitente nos últimos 60 metros até o teto.
+Vitória mostra tempo, melhor tempo e indicação de novo recorde. Derrota informa motivo. A chave de recorde da missão de retorno é separada das versões anteriores. Voo livre nunca registra tempos. Transições e reinícios restauram a escala de tempo e limpam objetos temporários.
 
-Estados: Menu Principal, Preparação, Correndo, Pausado, Derrota e Vitória.
-
-- Pausa congela física e cronômetro e oferece Continuar, Reiniciar e Menu Principal.
-- Derrota informa o motivo e oferece Reiniciar e Menu Principal.
-- Vitória mostra tempo final, recorde e opção de tentar novamente.
-- Perda de foco durante a run pausa o jogo para evitar colisões enquanto a janela está inativa.
-- Reinício e troca de menu restauram a escala de tempo corretamente.
-- Impedir que colisão, míssil e chegada encerrem a mesma run mais de uma vez; derrota tem prioridade se houver conflito na mesma etapa de física.
-
-## Organização prevista
+## Organização técnica
 
 | Componente | Responsabilidade |
 | --- | --- |
-| FlightInput | Ler teclado e gamepad pelo Input System |
-| FlightController | Empuxo, arrasto, sustentação e rotação |
-| AircraftVisuals | Superfícies móveis e efeitos do motor |
-| ChaseCamera | Acompanhamento e prevenção de obstruções |
-| CanyonCourse | Geometria, setores e limites da fase |
-| RunManager / MissionProgress | Estados, cronômetro, ida/retorno, vitória na base e reinício |
-| AirDefense / MissionRules | Aquisição, disparos, perseguição e dez contramedidas |
-| FreeFlightWorld | Mapa independente de treino |
-| MissionMapGraphic | Traçado/relevo vetorial do briefing |
-| GameUI | Menus, HUD e mensagens |
-| RecordStore | Persistência local do melhor tempo por fase |
+| GameBootstrap / SkyRacersBuilder | Montagem em execução ou geração de cena editável/build |
+| FlightInput | Teclado e gamepad |
+| FlightController / FlightDynamics | Rigidbody e equações de voo |
+| AircraftFactory / AircraftVisuals / FlightSurfaceMixer | Modelo e superfícies móveis |
+| FlightEffects | Motor visual, alarmes, boom sônico e destroços |
+| ChaseCamera | Câmera, lente e fog em execução |
+| CanyonCourse / AlpineMesh | Traçado, terreno, ponte e arcos de missão |
+| FreeFlightWorld / SimpleClouds | Mapa de treino e nuvens |
+| RunManager / MissionProgress | Estados e sequência de ida/volta |
+| AirDefense / MissionRules | SAMs, guiagem e contramedidas |
+| GameUI / HudTape / MissionMapGraphic | Menus, instrumentos e mapas |
+| GameMusic | Troca de faixas, entrada suave e pausa |
+| RecordStore | Melhor tempo local |
 
-Separar scripts próprios, prefabs, materiais, áudio e cenas de assets de terceiros. Manter o modelo original intacto e configurar um prefab próprio do jogador.
+A cena `Assets/Scenes/CanyonRun.unity` monta o jogo ao iniciar. O comando `SkyRacers > 1 - Build Game Scene` gera uma versão editável e sobrescreve essa cena; edições manuais devem ser preservadas separadamente. O menu também oferece abertura da cena, build Windows e validação geométrica do percurso.
 
-## Ordem de execução
+## Distribuição e créditos
 
-1. Inspecionar e importar o caça; acertar materiais URP, escala, orientação, superfícies e colisores.
-2. Implementar voo e câmera em um corredor simples; ajustar a sensação de controle.
-3. Construir o cânion fixo com progressão de dificuldade e chegada.
-4. Integrar estados, cronômetro, recorde, HUD e menus.
-5. Integrar animações, efeitos, áudio e acabamento visual.
-6. Validar a run inteira, corrigir colisões e calibrar duração/dificuldade.
-7. Gerar build Windows, completar créditos e preparar a entrega.
+Página do projeto: https://guedera.itch.io/skyracers. Uma build WebGL foi enviada e executada pelo usuário. A capa de 630 × 500 mostra um caça frontal em estilo anime; é uma ilustração gerada por IA, não uma captura do gameplay. A página inclui descrição, controles e declaração de uso de IA.
 
-## Critérios de conclusão
+Para atualizar a versão publicada, é necessário recompilar o projeto e substituir o ZIP no itch.io. A configuração de incorporação deve acomodar o canvas; foi relatado recorte na página, com orientação para testar lançamento em tela cheia. O resultado dessa correção não foi confirmado nesta revisão.
 
-Situação da implementação: os sistemas abaixo estão escritos, com compilação C# verificada. A confirmação em Play Mode permanece pendente.
+Créditos: modelo/texturas do ZIP `low-poly-f18-super-hornet.zip`, fornecido pelo usuário; o ZIP não informa autor/licença. Músicas: Top Gun Anthem, Harold Faltermeyer, e Danger Zone, Kenny Loggins, fornecidas pelo usuário. Cenário, interface, código e áudio procedural desenvolvidos no projeto com assistência de IA. Autorizações/licenças dos assets de terceiros não foram documentadas no projeto.
 
-- Todos os comandos funcionam conforme a tabela, inclusive teclas pressionadas simultaneamente.
-- A câmera mantém boa visibilidade em curvas e perto de paredes.
-- Paredes e piso não podem ser atravessados na maior velocidade atingível.
-- O teto só habilita SAMs na volta; descida impede novos disparos, sem apagar mísseis já lançados. Flares e terreno permitem evasão.
-- A chegada só aceita percurso válido e grava recorde apenas se o tempo melhorar.
-- Pausar não acumula tempo; reiniciar zera tudo; voltar ao menu permite jogar novamente.
-- As superfícies móveis seguem os comandos, sem dobrar as asas.
-- Ida e volta completas são cronometradas; duração e dificuldade calibradas por playtest.
-- Jogo utilizável do menu à vitória/derrota e de volta, sem erros no Console.
-- Build Windows testada; desempenho medido no hardware de teste, buscando 60 FPS com qualidade adequada.
+## Validação e entrega
 
-## Entrega acadêmica
+O usuário realizou playtests e forneceu feedback de pilotagem, cenário, efeitos e publicação WebGL. A compilação C# dos scripts de jogo/editor, referências dos assets e ensaios numéricos automatizados passaram nas últimas verificações. Isso não equivale à validação visual de cada revisão nem à execução de todas as plataformas.
 
-A cena inicial monta o jogo ao dar Play, sem importador externo. O menu `SkyRacers > 1 - Build Game Scene` permite gerar a versão editável com meshes e prefab persistentes. O comando de build Windows está no mesmo menu.
+`Tools/verify_project.py` verifica o modelo, superfícies, referências e compilação, além de executar `Tools/FlightChecks.cs`. Os ensaios cobrem dinâmica de voo, inércia, comandos, HUD, sequência de ida/volta, vitória na base, radar, cadência, estoque e velocidade/agilidade dos mísseis. Exemplo: perseguição retilínea de um alvo a 450 m/s, começando 2 km atrás, fecha a distância em 5,76 s. O ensaio isolado de voo a plena potência atinge Mach 1,29 em 20 s; não é uma medição de gameplay.
 
-O percurso atual tem aproximadamente 46,3 km e 1.001 pontos. O piso varia entre aproximadamente -1 e 209 unidades de altitude. A corrida inicia 65 unidades acima do piso, a 170 unidades/s (612 km/h), com potência de 62%. O voo livre inicia a 420 unidades acima do piso em (0, −7500) no mapa separado de treino. A duração com a nova física deve ser medida em voo.
+Validação final necessária:
 
-Propulsão: aceleração-base 18 m/s² e pós-combustão adicional 10 m/s² a 100% de potência. O Mach usa referência fixa de 340 m/s. Massa de 12.000 kg, área de referência de 37,2 m² e densidade decrescente com altitude. Sustentação por ângulo de ataque e pressão dinâmica; arrasto de perfil, induzido, transônico, de derrapagem e dos airbrakes. W/S comandam taxa de pitch de até 75°/s, com proteção preditiva de ângulo de ataque e carga G. Ao soltar, o trim estabiliza o voo. Aceleração angular limitada a 480°/s² no pitch; roll até 150°/s. Pose usada na física vem de Rigidbody.rotation, sem atraso da interpolação visual. A gravidade e a orientação da sustentação produzem as curvas, sem realinhamento artificial da velocidade. Parâmetros ajustados para jogabilidade, não dados certificados do F/A-18.
+- Completar ida e volta passando pelos três marcos, sem derrota indevida no arco central.
+- Confirmar aquisição de SAMs acima do teto nas duas pernas e ausência de SAMs no voo livre.
+- Conferir as dez cargas, as salvas de 24 flares, distância/direção dos mísseis e evasão.
+- Testar gamepad físico, pausa, retomada, reinício, troca de modo e recentralização da câmera.
+- Conferir fog, nuvens, lente, boom sônico, músicas e volumes no Editor e na nova build WebGL.
+- Confirmar menu/HUD sem cortes na página e em tela cheia; áudio após interação no navegador.
+- Medir desempenho e colisões em alta velocidade; meta de 60 FPS no hardware de teste.
+- Validar a build Windows e as submissões acadêmicas; não há confirmação automatizada de entrega.
 
-O ensaio longitudinal de 20 s mantém voo neutro com desvio vertical de aproximadamente −5,7 m. O ensaio de 2 s puxando o nariz a plena potência altera a atitude em cerca de 75°. Com pós-combustão, o ensaio de 20 s chega a Mach 1,29. Esses testes exercitam as equações reais, mas não substituem a execução do Rigidbody, das colisões e dos controles no Unity.
+Conforme o enunciado local `Projeto_3D_20262.docx.pdf`: entrega prevista até 25/11/2026, build para pelo menos Windows, repositório com código-fonte e créditos, GDD atualizado e página no itch.io vinculada à jam com instruções e imagens/vídeos. Confirmar envios no Blackboard, GitHub e itch.io.
 
-As chamas nascem nos centros dos bocais reais (nós 5 e 6), calculados após a escala do modelo. Sem pós-combustão há brilho curto e discreto; a 100%, a pluma se alonga e fica azul. A física aprovada foi preservada nesta revisão; a câmera recebeu órbita manual e recentralização após dez segundos.
-
-Sombras: perfil PC com distância 600, resolução 4096 e quatro cascatas; Mobile com distância 300, resolução 2048 e duas cascatas. O limite anterior era 50. A nova fase usa uma chave própria de recorde, preservando os dados antigos sem compará-los ao novo percurso.
-
-Validação desta revisão: compilação C#, referências de assets e cálculos de velocidade/escala/abertura da ponte. O validador de cena do Unity inclui cobertura do piso, setores, teto local, rejeição de desvio da ponte e BoxCast sob o arco central; ainda deve ser executado no editor. Visual, shaders, colisões em execução, FPS e build Windows desta revisão não foram testados neste ambiente.
-
-Conforme o enunciado local `Projeto_3D_20262.docx.pdf`: entrega prevista até 25/11/2026; build para pelo menos Windows; repositório com código-fonte e créditos no README; GDD atualizado; página no itch.io vinculada à jam com instruções e imagens/vídeos; confirmar submissões no Blackboard, GitHub e itch.io.
-
-Jam indicada no enunciado: https://itch.io/jam/projeto-jogo-3d-insper-20262
-
-Os quatro eixos da avaliação são controles/câmera, desempenho/colisões, modelos/materiais/texturas e gerenciamento de estados/erros. A validação final deve cobrir os quatro.
-
-
-## Revisão de efeitos e cenário — 18/11/2026
-
-- Profundidade triplicada para 450 m, largura reduzida para aproximadamente 59–101 m no fundo. Postes removidos; chegada marcada no piso.
-- Duas cachoeiras com névoa, relevo com mais segmentos, normais suavizadas e detalhe procedural na superfície para reduzir o aspecto facetado.
-- Arco central de 22 × 438 m, com pilares altos e cabeceira próxima ao tabuleiro. A passagem exige alinhamento lateral.
-- HUD lateral verde neon de altitude, velocidade e potência; centro da tela livre. Alarme pulsado de altitude que cessa em pausa, derrota ou retorno à altitude segura.
-- Fumaça dos motores e trilhas nas pontas das asas com baixa opacidade.
-- Impacto separa as 74 meshes em destroços com colisores, gera fogo, fumaça, fragmentos e som; aguarda 2,5 s antes do resultado. Reiniciar restaura o avião e remove destroços.
-- Boom sônico e anel discreto de condensação somente na passagem de Mach < 1 para Mach >= 1 durante a run. Não dispara ao desacelerar, permanecer supersônico ou retomar de uma pausa.
-- Nova física assistida e modo livre para testes. Novo identificador de recorde para não misturar tempos da física anterior.
-
-Compilação C# e referências verificadas. Efeitos, som, desempenho e passagem pela ponte ainda precisam de playtest no Unity nesta revisão.
-
-
-## Defesa antiaérea e referência cinematográfica — 24/11/2026
-
-Referência pesquisada: [roteiro de Top Gun: Maverick](https://assets.scriptslug.com/live/pdf/scripts/top-gun-maverick-2022.pdf), pp. 72, 95 e 137. Princípios adotados: o relevo mascara o caça; subir o expõe aos SAMs; escapar exige manobra, retorno ao cânion e contramedidas limitadas. O filme não fixa cadência ou envelope de guiagem. Os valores abaixo são parâmetros de jogo; flare representa a salva combinada de contramedidas, sem pretensão de reproduzir sensores reais.
-
-- Na volta, acima de 450 m sobre o piso local, bateria com visão direta a até 6,5 km adquire o caça após 1,5 s contínuo. Lançamentos separados por pelo menos 4 s, até quatro mísseis ativos.
-- Míssil acelera de 300 a 950 m/s; giro limitado a 10,5 G e 75°/s, aproximadamente o envelope de manobra do caça. Perseguição continua após o jogador descer; bloqueio pelo terreno por mais de 0,8 s elimina rastreamento. Há colisão com o cenário e expiração em 24 s.
-- Dez cargas por voo; cada pressionamento libera 24 flares em 12 pares ao longo de 0,55 s, com intervalo mínimo de 0,6 s entre cargas. Flare recente e visível pode distrair um míssil em seu cone frontal entre 90 e 850 m; um disparo tardio pode falhar.
-- Reiniciar recupera o estoque e remove ameaças; pausa congela toda a simulação. Voo livre permite testar os flares, sem SAMs.
-- Fim da ida alarga em uma bacia de 6,4 km, com cerca de 5 km extras de terreno longitudinal, para o jogador fazer a curva. Não há teleporte.
-
-Testes numéricos: sequência dos setores nas duas direções, rejeição de atalhos, vitória apenas na base, condições de aquisição, atraso/cadência, limite de mísseis e estoque/reset de flares. Compilação de scripts e editor verificada. Testes de voo com gamepad, aparência do menu, perseguição e colisões em Play Mode ainda pendentes; roteiro de teste no README.
-
-
-## Refinamento de contramedidas e cenário — 24/11/2026
-
-Cada carga dispara 24 flares em leque bilateral, com brilho branco/dourado, rastro quente curto e fumaça persistente. As emissões acompanham a posição atual do caça durante a salva; pausa congela a sequência e reinício a elimina. O estoque continua em dez acionamentos.
-
-SAMs partem a 300 m/s, aceleram a 240 m/s² e atingem 950 m/s. O limite de giro por carga G foi mantido: maior velocidade também exige maior raio de curva. No ensaio retilíneo, um míssil 2 km atrás de um alvo a 450 m/s o alcança em menos de sete segundos; curvas, relevo e flares alteram esse resultado em jogo.
-
-Terreno externo ampliado para aproximadamente 48 km de largura, com montanhas e 16 km adicionais em cada extremidade do terreno anterior. As novas malhas compartilham as bordas do cânion para fechar as laterais e cabeceiras, sem alargar o corredor da missão. O mapa continua finito; suas bordas ficam afastadas do percurso e além da distância de renderização durante o voo pela missão.
-
-Conferir em Play: salva vista pela câmera traseira e orbital, estoque por acionamento, pausa/reinício durante a salva, perseguição dos SAMs e ausência de bordas visíveis sobre o vale.
-
-
-## Arcos de missão e radar em ambas as pernas
-
-A missão agora possui dois arcos sinalizadores físicos, além da ponte central: arco de RETORNO no último setor e arco de BASE no primeiro setor. Cruzar o interior do arco final na ida inicia o retorno; cruzar o arco inicial na volta, após os setores obrigatórios, conclui a missão. Passar acima ou ao lado não ativa o marco; é possível reposicionar e tentar a passagem novamente.
-
-Regra atual de radar (substitui a restrição à volta descrita anteriormente): SAMs podem adquirir e lançar tanto na ida quanto na volta, se o caça estiver acima do teto, dentro do alcance e visível à bateria. Voo livre permanece sem SAMs.
+Jam: https://itch.io/jam/projeto-jogo-3d-insper-20262. Os eixos de avaliação são controles/câmera, desempenho/colisões, modelos/materiais/texturas e gerenciamento de estados/erros.

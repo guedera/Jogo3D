@@ -41,6 +41,7 @@ namespace SkyRacers
         Vector3 previousPosition;
         MissionProgress mission;
         FreeFlightWorld freeWorld;
+        GameMusic music;
         public float FloorAt(Vector3 position) => IsFreeFlight ? FreeFlightWorld.HeightAt(position.x,position.z) : Course.FloorAt(position.z);
         void Start()
         {
@@ -49,6 +50,7 @@ namespace SkyRacers
             Aircraft.name="Player F18";Aircraft.Run=this;
             Defense=gameObject.AddComponent<AirDefense>();Defense.Initialize(this);
             SimpleClouds.Create(Course.transform,false);
+            music=gameObject.AddComponent<GameMusic>();
             chaseCamera.target=Aircraft;ui.Initialize(this);MainMenu();
         }
         public void StartRun() => StartFlight(false);
@@ -69,6 +71,7 @@ namespace SkyRacers
         {
             crashUntil=0;crashMenuPending=false;turnNoticeUntil=0;IsFreeFlight=freeFlight;
             Time.timeScale=1;SelectWorld(freeFlight);Defense.ResetFlight();
+            music.PlayFlight(freeFlight);
             State=freeFlight?RunState.Running:RunState.Countdown;Countdown=freeFlight?0:3;
             Elapsed=0;NewRecord=false;Reason="";mission=new MissionProgress(Course.route.Length);
             Vector3 spawn=freeFlight?freeWorld.Spawn:Course.Spawn;
@@ -81,6 +84,7 @@ namespace SkyRacers
         {
             crashUntil=0;crashMenuPending=false;turnNoticeUntil=0;IsFreeFlight=false;
             Time.timeScale=1;State=RunState.Menu;Elapsed=0;mission=new MissionProgress(Course.route.Length);
+            music.PlayMenu();
             SelectWorld(false);Defense.ResetFlight();Aircraft.ResetFlight(Course.Spawn,Course.SpawnRotation);
             Physics.SyncTransforms();chaseCamera.Snap();Cursor.visible=true;ui.RefreshState();
         }
@@ -124,13 +128,13 @@ namespace SkyRacers
         public void Pause()
         {
             if(State!=RunState.Running&&State!=RunState.Countdown)return;
-            pausedFrom=State;State=RunState.Paused;Time.timeScale=0;
+            pausedFrom=State;State=RunState.Paused;Time.timeScale=0;music.PauseMusic();
             Aircraft.Input.Clear();Cursor.visible=true;ui.RefreshState();
         }
         public void Resume()
         {
             if(State!=RunState.Paused)return;
-            State=pausedFrom;Time.timeScale=1;Cursor.visible=false;ui.RefreshState();
+            State=pausedFrom;Time.timeScale=1;music.ResumeMusic();Cursor.visible=false;ui.RefreshState();
         }
         public void Crash(string reason="Colisão com o cenário.")
         {

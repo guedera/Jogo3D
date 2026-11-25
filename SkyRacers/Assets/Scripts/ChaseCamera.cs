@@ -18,6 +18,12 @@ namespace SkyRacers
             var data=GetComponent<UniversalAdditionalCameraData>();
             if(data==null)data=gameObject.AddComponent<UniversalAdditionalCameraData>();
             data.renderPostProcessing=true;
+            // Fully blend distant geometry before the camera clips it away.
+            RenderSettings.fog=true;RenderSettings.fogMode=FogMode.Linear;
+            RenderSettings.fogStartDistance=700;RenderSettings.fogEndDistance=2700;
+            RenderSettings.fogColor=new Color(.66f,.74f,.80f);
+            lens.farClipPlane=Mathf.Max(lens.farClipPlane,3500);
+            lens.backgroundColor=RenderSettings.fogColor;
             var effects=new GameObject("Subtle flight lens");effects.transform.SetParent(transform,false);
             effects.layer=0;
             data.volumeLayerMask |= 1;

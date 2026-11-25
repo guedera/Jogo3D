@@ -90,15 +90,21 @@ namespace SkyRacers
         void SonicBoom()
         {
             sounds.PlayOneShot(boomClip,.48f);
-            var ps=Particles("Sonic condensation",transform.position,null,new Color(.84f,.93f,1,.10f),.38f,2,0);
+            var ps=Particles("Sonic condensation",transform.position,null,new Color(.88f,.96f,1,.48f),.65f,4,0);
             var e=ps.emission;e.enabled=false;
-            for(int i=0;i<64;i++)
+            // Three expanding rings form a short condensation cone around the jet.
+            for(int ring=0;ring<3;ring++)
+            for(int i=0;i<80;i++)
             {
-                float a=i*Mathf.PI*2/64;Vector3 radial=transform.right*Mathf.Cos(a)+transform.up*Mathf.Sin(a);
-                var p=new ParticleSystem.EmitParams {position=transform.position+radial*3,velocity=plane.Body.linearVelocity+radial*26,startLifetime=.32f,startSize=1.3f,startColor=new Color(.85f,.94f,1,.10f)};
+                float a=i*Mathf.PI*2/80;Vector3 radial=transform.right*Mathf.Cos(a)+transform.up*Mathf.Sin(a);
+                var p=new ParticleSystem.EmitParams {
+                    position=transform.position-transform.forward*(ring*3)+radial*(3+ring*2),
+                    velocity=plane.Body.linearVelocity*.92f+radial*(35+ring*7),
+                    startLifetime=.5f+ring*.07f,startSize=2.8f+ring*.4f,
+                    startColor=new Color(.88f,.96f,1,.48f-ring*.07f)};
                 ps.Emit(p,1);
             }
-            debris.Add(ps.gameObject); Destroy(ps.gameObject,1);
+            debris.Add(ps.gameObject); Destroy(ps.gameObject,1.5f);
         }
         public void BreakApart(Vector3 velocity)
         {

@@ -33,8 +33,8 @@ namespace SkyRacers.Editor
             RenderSettings.ambientSkyColor = new Color(.50f, .60f, .70f);
             RenderSettings.ambientEquatorColor = new Color(.37f, .46f, .46f);
             RenderSettings.ambientGroundColor = new Color(.19f, .24f, .23f);
-            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(.66f, .74f, .80f); RenderSettings.fogDensity = .00042f;
+            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(.66f, .74f, .80f); RenderSettings.fogStartDistance = 700; RenderSettings.fogEndDistance = 2700;
             var course = new GameObject("Canyon 01 - fixed course").AddComponent<CanyonCourse>();
             course.rockMaterial = MaterialAsset("Canyon Rock", Shader.Find("SkyRacers/Canyon Rock"), Color.white);
             course.markerMaterial = MaterialAsset("Course markers", Shader.Find("Universal Render Pipeline/Lit"), new Color(.85f, .96f, .35f));

@@ -25,8 +25,8 @@ namespace SkyRacers
             RenderSettings.ambientSkyColor = new Color(.50f, .60f, .70f);
             RenderSettings.ambientEquatorColor = new Color(.37f, .46f, .46f);
             RenderSettings.ambientGroundColor = new Color(.19f, .24f, .23f);
-            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(.66f, .74f, .80f); RenderSettings.fogDensity = .00042f;
+            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(.66f, .74f, .80f); RenderSettings.fogStartDistance = 700; RenderSettings.fogEndDistance = 2700;
             var cameraObject = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener), typeof(ChaseCamera));
             cameraObject.tag = "MainCamera";
             var camera = cameraObject.GetComponent<Camera>(); camera.nearClipPlane = .25f; camera.farClipPlane = 3500;
